@@ -8,11 +8,16 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
+
+import {findPath} from './findPath.js';
+
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
 
 const cardSize = 50;
 var extraCardPosition;
+var path = [];
+
 
 
 const cardType = {
@@ -139,7 +144,6 @@ function setEdgeCards(x, y) {
 }
 
 function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed stones + fill random cards
-    console.log('initLab');
     canvas.width = x * cardSize + 2 * cardSize;
     canvas.height = y * cardSize;
 
@@ -299,7 +303,6 @@ function markMovableVerLine(x, y) {
 function markMovableHorLine(x, y) {
     drawLab();
     ctx.save();
-    console.log(x,y);
     ctx.translate(0, y);
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(200,200,200,0.9)';
@@ -315,12 +318,6 @@ function drawLab() {
         })
     })
     drawXCard();
-}
-
-window.onload = () => {
-    console.log('onlaod');
-    initLab(7, 7);
-    drawLab();
 }
 
 function define(shape) {
@@ -346,15 +343,35 @@ function handleMouseDown(x, y) {
                     break;
                 case clickableType.HORTOPEDGECARD:
                     shiftRow(shape.points[0].x / cardSize, true);
+                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+                        console.log('path found!');
+                    } else {
+                        console.log('path not found')
+                    };
                     break;
                 case clickableType.HORBOTEDGECARD:
                     shiftRow(shape.points[0].x / cardSize, false);
+                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+                        console.log('path found!')
+                    } else {
+                        console.log('path not found')
+                    };
                     break;
                 case clickableType.VERLEFTEDGECARD:
                     shiftLine(shape.points[0].y / cardSize, true);
+                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+                        console.log('path found!')
+                    } else {
+                        console.log('path not found')
+                    };
                     break;
                 case clickableType.VERRIGHTEDGECARD:
                     shiftLine(shape.points[0].y / cardSize, false);
+                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+                        console.log('path found!')
+                    } else {
+                        console.log('path not found')
+                    };
                     break;
                 default:
                     drawLab();
@@ -366,7 +383,7 @@ function handleMouseDown(x, y) {
 }
 
 function handleMouseMove(x, y) {
-    mouseout = true;
+    var mouseout = true;
     clickableShapes.forEach((shape, index) => {
         define(shape);
 
@@ -395,12 +412,24 @@ function handleMouseMove(x, y) {
 }
 
 canvas.addEventListener('mousedown', e => {
-    x = e.offsetX;
-    y = e.offsetY;
+    var x = e.offsetX;
+    var y = e.offsetY;
     handleMouseDown(x, y);
 });
 canvas.addEventListener('mousemove', e => {
-    x = e.offsetX;
-    y = e.offsetY;
+    var x = e.offsetX;
+    var y = e.offsetY;
     handleMouseMove(x, y);
 })
+
+
+window.onload = () => {
+    console.log('onlaod');
+    initLab(7, 7);
+    drawLab();
+    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+        console.log('path found!')
+    } else {
+        console.log('path not found')
+    };
+}
