@@ -9,7 +9,7 @@
 // cross orientation:1		--> all:1
 // canvas variables
 
-import {findPath} from './findPath.js';
+import { shortestPath, findPath } from './findPath.js';
 
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
@@ -263,15 +263,15 @@ function shiftLine(line, right) {
     var cardonStack = extraCard;
     var newCardonStack;
     if (right) {
-        lab[line].forEach((card, index,array) => {
+        lab[line].forEach((card, index, array) => {
             newCardonStack = card;
             array[index] = cardonStack;
             cardonStack = newCardonStack;
         })
     } else {
         for (var i = lab[0].length; i > 0; i--) {
-            newCardonStack = lab[line][i-1];
-            lab[line][i-1] = cardonStack;
+            newCardonStack = lab[line][i - 1];
+            lab[line][i - 1] = cardonStack;
             cardonStack = newCardonStack;
         }
     }
@@ -306,8 +306,26 @@ function markMovableHorLine(x, y) {
     ctx.translate(0, y);
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(200,200,200,0.9)';
-    ctx.strokeRect(0, 0, x+cardSize, cardSize);
+    ctx.strokeRect(0, 0, x + cardSize, cardSize);
     ctx.restore();
+}
+
+function drawPath(pfad) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(25,25,0,0.8)';
+    pfad.forEach((field1, index, array) => {
+        if (index < array.length - 1) {
+            ctx.save();
+            ctx.translate(field1[1] * cardSize + (Math.floor(cardSize / 2)),
+                field1[0] * cardSize + Math.floor(cardSize / 2));
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo((array[index + 1][1] - field1[1]) * cardSize,
+                (array[index + 1][0] - field1[0]) * cardSize);
+            ctx.stroke();
+            ctx.restore();
+        }
+    })
 }
 
 function drawLab() {
@@ -320,7 +338,7 @@ function drawLab() {
     drawXCard();
 }
 
-function define(shape) {
+function defineShape(shape) {
     var points = shape.points;
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
@@ -331,7 +349,7 @@ function define(shape) {
 
 function handleMouseDown(x, y) {
     clickableShapes.forEach((shape, index) => {
-        define(shape);
+        defineShape(shape);
         //console.log(shape);
         //console.log(x, y);
         // test if the mouse is in the current shape
@@ -343,32 +361,36 @@ function handleMouseDown(x, y) {
                     break;
                 case clickableType.HORTOPEDGECARD:
                     shiftRow(shape.points[0].x / cardSize, true);
-                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
+                    if (findPath([0, 0], [3, 5], lab, [[0, 0]])) {
                         console.log('path found!');
+                        drawPath([...shortestPath, [3, 5]]);
                     } else {
                         console.log('path not found')
                     };
                     break;
                 case clickableType.HORBOTEDGECARD:
                     shiftRow(shape.points[0].x / cardSize, false);
-                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
-                        console.log('path found!')
+                    if (findPath([0, 0], [3, 5], lab, [[0, 0]])) {
+                        console.log('path found!');
+                        drawPath([...shortestPath, [3, 5]]);
                     } else {
                         console.log('path not found')
                     };
                     break;
                 case clickableType.VERLEFTEDGECARD:
                     shiftLine(shape.points[0].y / cardSize, true);
-                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
-                        console.log('path found!')
+                    if (findPath([0, 0], [3, 5], lab)) {
+                        console.log('path found!');
+                        drawPath([...shortestPath, [3, 5]]);
                     } else {
                         console.log('path not found')
                     };
                     break;
                 case clickableType.VERRIGHTEDGECARD:
                     shiftLine(shape.points[0].y / cardSize, false);
-                    if (findPath([0,0],[0,2],lab,[[0,0]])) {
-                        console.log('path found!')
+                    if (findPath([0, 0], [3, 5], lab)) {
+                        console.log('path found!');
+                        drawPath([...shortestPath, [3, 5]]);
                     } else {
                         console.log('path not found')
                     };
@@ -385,12 +407,9 @@ function handleMouseDown(x, y) {
 function handleMouseMove(x, y) {
     var mouseout = true;
     clickableShapes.forEach((shape, index) => {
-        define(shape);
-
-
+        defineShape(shape);
         // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
-            //console.log(x, y, shape.cat);
             switch (shape.cat) {
                 case clickableType.EXTRACARD:
                     markExtraCard();
@@ -424,12 +443,6 @@ canvas.addEventListener('mousemove', e => {
 
 
 window.onload = () => {
-    console.log('onlaod');
     initLab(7, 7);
     drawLab();
-    if (findPath([0,0],[0,2],lab,[[0,0]])) {
-        console.log('path found!')
-    } else {
-        console.log('path not found')
-    };
 }
