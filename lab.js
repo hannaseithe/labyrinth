@@ -156,11 +156,28 @@ function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed 
             var newCard = {
                 shape: Math.floor(Math.random() * 4) % 4,
                 orientation: Math.floor(Math.random() * 4) % 4,
-                fixed: ((i % 2 == 0) && (j % 2 == 0))
+                fixed: ((i % 2 == 0) && (j % 2 == 0)),
+                number: undefined
             };
             newRow.push(newCard);
         }
         lab.push(newRow)
+    }
+
+    let amountNumbers = Math.floor((x*y)/3); 
+    for (let i=0; i < amountNumbers; i++) {
+        let numberSet = false;
+        while (!numberSet) {
+            let randomX = Math.floor(Math.random() * x);
+            let randomY = Math.floor(Math.random() * y);
+            console.log("randomX & randomY",randomX, randomY);
+            if (!lab[randomX][randomY].number) {
+                console.log("!lab.number")
+                lab[randomX][randomY].number = i + 1;
+                numberSet = true;
+            }
+        }
+        
     }
 }
 
@@ -222,6 +239,12 @@ function drawCard(x, y, card) {
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     };
     ctx.strokeRect(-Math.floor(cardSize / 2), -Math.floor(cardSize / 2), cardSize, cardSize);
+    
+    ctx.fillStyle = 'rgba(0,0,150,0.8)';
+    if (card.number) {
+        ctx.fillText(card.number + ".", Math.floor(cardSize / 5), Math.floor(cardSize / 3))
+    }
+
     ctx.restore();
 }
 
