@@ -15,8 +15,8 @@ var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
 
 const cardSize = 50;
+const playerRadius = 10;
 var extraCardPosition;
-var path = [];
 
 
 
@@ -31,10 +31,12 @@ const clickableType = {
     HORTOPEDGECARD: 1,
     HORBOTEDGECARD: 2,
     VERLEFTEDGECARD: 3,
-    VERRIGHTEDGECARD: 4
+    VERRIGHTEDGECARD: 4,
+    PLAYER: 5
 }
 
 var lab = [];
+let players = [];
 var clickableShapes = [];
 
 
@@ -143,6 +145,17 @@ function setEdgeCards(x, y) {
     }
 }
 
+function setPlayer(pos, id) {
+    clickableShapes.push({
+        points: [{
+            x: pos[0] * cardSize + Math.floor(cardSize/2),
+            y: pos[1] * cardSize + Math.floor(cardSize/2)
+        }],
+        cat: clickableType.PLAYER,
+        playerId: id
+    })
+}
+
 function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed stones + fill random cards
     canvas.width = x * cardSize + 2 * cardSize;
     canvas.height = y * cardSize;
@@ -179,6 +192,33 @@ function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed 
         }
         
     }
+}
+
+function initPlayers(amountPlayers, x, y) {
+    let amountNumbers = Math.floor((x*y)/3);
+    console.log("amountNumbers",amountNumbers);
+    let usedNumbers = new Array(amountNumbers);
+    for (let i = 0; i < amountPlayers; i++) {
+        let indexX = (i % 2) * (x-1);
+        let indexY = ((Math.floor(i/2)) % 2) * (y-1);
+        let listNumbers = [];
+        for (let j = 0; j < Math.floor(amountNumbers/amountPlayers); j++) {
+            let newNumber = Math.floor(Math.random() * amountNumbers) ;
+            while (usedNumbers[newNumber]) {
+                newNumber = Math.floor(Math.random()* amountNumbers);  
+                }
+            usedNumbers[newNumber] = true;
+            listNumbers.push({number: newNumber + 1, solved: false})
+            }
+        players[i] = {
+            currentPosition: [indexX,indexY],
+            listNumbers: listNumbers,
+            isDragging: false,
+            draggingPosition: []
+        };
+        setPlayer(players[i].currentPosition,i)
+    }
+    console.log(players);
 }
 
 function drawCard(x, y, card) {
@@ -351,6 +391,29 @@ function drawPath(pfad) {
     })
 }
 
+function drawPlayer(x,y) {
+    console.log(x,y);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(200,0,0,0.9)';
+    ctx.beginPath();
+    ctx.arc(0,0,playerRadius,0,2*Math.PI);
+    ctx.fill()
+    ctx.restore();
+}
+
+function drawPlayers() {
+
+    for (let i = 0; i < players.length; i ++) {
+        if (!players[i].isDragging) {
+            drawPlayer(players[i].currentPosition[0] * cardSize + (Math.floor(cardSize / 2)),players[i].currentPosition[1] * cardSize + (Math.floor(cardSize / 2)))
+        } else {
+            drawPlayer(players[i].draggingPosition[0], players[i].draggingPosition[1])
+        }
+        
+    }
+}
+
 function drawLab() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     lab.forEach((line, line_index) => {
@@ -359,15 +422,23 @@ function drawLab() {
         })
     })
     drawXCard();
+    drawPlayers();
 }
 
 function defineShape(shape) {
     var points = shape.points;
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (var i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
+    if (shape.cat == clickableType.PLAYER) {
+        console.log("In Define Shape -> Player");
+        ctx.beginPath();
+        ctx.arc(shape.points[0].x,shape.points[0].y,playerRadius,0,2*Math.PI);
+    } else {
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (var i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
     }
+    
 }
 
 function handleMouseDown(x, y) {
@@ -377,6 +448,7 @@ function handleMouseDown(x, y) {
         //console.log(x, y);
         // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
+        
 
             switch (shape.cat) {
                 case clickableType.EXTRACARD:
@@ -418,6 +490,11 @@ function handleMouseDown(x, y) {
                         console.log('path not found')
                     };
                     break;
+                case clickableType.PLAYER:
+                    console.log("Is Player");
+                    players[shape.playerId].isDragging = true;
+                    players[shape.playerId].draggingPosition = [x,y]
+                    break;
                 default:
                     drawLab();
                     break;
@@ -434,6 +511,10 @@ function handleMouseMove(x, y) {
         // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
             switch (shape.cat) {
+                case clickableType.PLAYER:
+                    players[shape.playerId].draggingPosition = [x,y];
+                    shape.points[0] = {x:x,y:y};
+                    break;
                 case clickableType.EXTRACARD:
                     markExtraCard();
                     mouseout = false;
@@ -453,6 +534,48 @@ function handleMouseMove(x, y) {
     if (mouseout) { drawLab() }
 }
 
+function getCardFromMousePosition(x,y) {
+    let xIndex = Math.floor(x/cardSize);
+    let yIndex = Math.floor(y/cardSize);
+    if (xIndex < lab.length & (yIndex < lab[0].length)) {
+        return [xIndex,yIndex]
+    }
+    return undefined
+}
+
+function handleMouseUp(x, y) {
+    clickableShapes.forEach((shape, index) => {
+        defineShape(shape);
+        // test if the mouse is in the current shape
+        if (ctx.isPointInPath(x, y)) {
+            switch (shape.cat) {
+                case clickableType.PLAYER:
+                    //getCard
+                    //if Card test Path
+                    //if Path move Player
+                    let card = getCardFromMousePosition(x,y);
+                    if (card) {
+                        if (findPath(players[shape.playerId].currentPosition, card, lab)) {
+                            players[shape.playerId].currentPosition = card;
+                            shape.points[0] = {x: x, y:y};
+                    } else {
+                        shape.points[0] = {x: players[shape.playerId].currentPosition[0]*cardSize +(cardSize/2), y:players[shape.playerId].currentPosition[1]*cardSize + (cardSize/2)};
+                    }
+                    } else {
+                        shape.points[0] = {x: players[shape.playerId].currentPosition[0]*cardSize +(cardSize/2), y:players[shape.playerId].currentPosition[1]*cardSize + (cardSize/2)};
+                    }
+                     
+                    players[shape.playerId].isDragging = false;
+                    
+                    break;
+                default: break;
+            }
+        }
+
+    });
+     drawLab();
+}
+
 canvas.addEventListener('mousedown', e => {
     var x = e.offsetX;
     var y = e.offsetY;
@@ -463,9 +586,15 @@ canvas.addEventListener('mousemove', e => {
     var y = e.offsetY;
     handleMouseMove(x, y);
 })
+canvas.addEventListener('mouseup', e => {
+    var x = e.offsetX;
+    var y = e.offsetY;
+    handleMouseUp(x, y);
+})
 
 
 window.onload = () => {
     initLab(7, 7);
+    initPlayers(3,7,7);
     drawLab();
 }
