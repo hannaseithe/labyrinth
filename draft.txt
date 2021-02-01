@@ -1,0 +1,133 @@
+//--> Enabling the playing of two players
+// #1 Step: 
+//      - One player, start in left bottom corner + has to reach one randomly chosen card + 
+//      - 1 round consists of cardmove -> figure move (when figure moves computer tests if possible)
+//      - win when goal card is reached
+
+/* - card {
+    ...
+    number: integer
+    goal: BOOLEAN 
+}
+
+    - player {
+        goals [1,5,2,....] // we just play with one element in step #1
+        currentGoal: 1
+    } */
+
+/*****
+Fragen: - wie finde ich die aktuelle Zielkarte an Hand der Nummer der Goals?
+
+
+Pathfinding?
+        - "weg nach oben" : 
+            corner -> card.orientation      == (0 || 3)
+            straight -> card.orientation    == (0 || 2)
+            tcross -> card.orientation      == (0 || 2 || 3)
+            cross = TRUE
+        - "weg nach rechts" 
+            corner -> card.orientation      == (1 || 0)
+            etc.
+Card1 unterhalb von Card2:
+    - card1 {orientation: 2, type: corner}
+    - card2 {orientation: 3, type: straight}
+    isPath(card,direction) { // direction: 1 -> left, 2 -> bottom, 3 -> right
+        switch (card1.cat) {
+            case "corner":
+                return card.orientation + direction == (0 || 3);
+            case "straight":
+                return card.orientation + direction ==(0 || 2);
+            case "tcross":
+                return card.orientation + direction == (0 || 2 || 3);
+            case "cross";
+                return TRUE;
+            default:
+                throw exception;
+                break;
+        }
+    }
+
+    isPath(cindex1,cindex2) {
+        var isPath = true;
+        var direction: INTEGER;
+        direction = cindex1[0] > cindex2[0] : 
+        if (cindex1[0] > cindex2[0])
+        return isPath(card1, DIRECTION.top) && isPath(card2, DIRECTION.bottom)
+    }
+
+    /***
+    card11,card12,card13 / card21,card22, card23 / card31, card32, card33
+    player is at card31 and wants to move to card13 
+    test top > right > bottom > left
+    ***/
+    
+  
+
+    17.11.
+
+    Irgendwie will ich das OO machen, sprich nach aussen wird Pfad Ja/Nein und wenn 
+    ja der (kürzeste; muss noch implementiert werden) kommuniziert. Ich weiss nicht, 
+    irgendwie bin ich insgesamt mit der Hin- und Herreichung der Daten nicht zufrieden.
+    Das ist nicht sauber. Sollte findPath nicht eher eine Klasse sein?
+        - wenn ich findPath.js in eine Klasse packe, mit den beiden öffentlichen .bestPath: Array
+        und .findPath(startindex, goalindex, lab), was dann intern .findPathRec(goalindex, lab, [goalindex])
+        aufruft. Und on return setze ich .bestPath = path
+        - wie finde ich den kürzesten Path-> wir returnen nicht bei true, sondern setzen Mitlauf Variable
+        auf true und Vergleichen die Länge des Paths bei zweitem true (wenn kürzer, wird .bestPath
+        ersetzt) -> und am Ende returnen wir die Mitlauf-Variable.
+
+
+    Und wenn ich dann den Pfad habe, will ich ihn zeichnen lassen.
+        - Funktion drawPath(Pfad) {
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(255,25,0,0.8)';
+            Pfad.forEach((field1, index, array) => {
+                if (index < array.length - 1) {
+                ctx.save();
+                ctx.translate(field1[0] * cardSize + (Math.floor(cardSize / 2)), field1[1] * cardSize + Math.floor(cardSize / 2));
+                ctx.beginPath();
+                //ctx.moveTo(0, -Math.floor(cardSize / 2));
+                ctx.lineTo(array[index + 1][0] * cardSize + (Math.floor(cardSize / 2)), array[index + 1[1] * cardSize + Math.floor(cardSize / 2));
+                ctx.stroke();
+                ctx.restore();
+                }
+            })
+        }
+            
+
+    Und dann will ich das mit einer Figur implementieren, die man bewegen kann.
+
+    28.1.
+
+    Endergebnis
+    Zwei bis vier Spieler können das verrückte Labyrinth spielen. Es gibt auch eine AI Option.
+
+   
+    - Implementierung von Ziffer auf Karte und zeichnen
+        (- wie linke ich später Symbole zu Ziffern?)
+        (- wie mache ich später eine nicht-zufällige Zuordnung von Ziffern Kartentypen?)
+        - zufällige Zuordnung von Ziffern
+        - zeichnen
+    - Implementierung von Player mit List of Cards
+        - Datatype Player mit "Stack of Numbers" (solved/unsolved), currentPosition
+        -   Player zeichnen
+    - Implementierung von Spielfigur die Bewegbar ist (falls Pfad vorhanden) mit Drag & Drop
+        - stop all other events while dragging
+        - stop all other clickableShapes, when clicking on 
+        - losing player when dragging too fast
+        - use buttons outside board to shift cards"
+    >- mich stört es total dass ich clickableShapes getrennt von den eigentlichen Shapes pflege
+        -> das ist doppelt gemoppelt! Insbesondere was die Player angeht -> vielleicht kann man die Player zusammnführen?
+    
+        >? markup on mouseover?
+       
+    - lab.js auseinander nehmen -> wird zu groß
+
+        
+    - move Player with card        
+        -Rausschieben von Player implementieren
+
+    - Implementierung von Abarbeitung der Liste
+
+    - Implementierung von mehreren Playern und Turns
+

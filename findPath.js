@@ -134,5 +134,7 @@ function findPathR(startIndex, goalIndex, lab, path) {
 export function findPath(startIndex, goalIndex, lab) {
     shortestPath = [];
     pathExists = false;
-    return findPathR(startIndex,goalIndex,lab, [startIndex]);
+    let startIndexR = [startIndex[1],startIndex[0]];
+    let goalIndexR = [goalIndex[1],goalIndex[0]];
+    return findPathR(startIndexR,goalIndexR,lab, [startIndexR]);
 }

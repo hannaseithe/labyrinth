@@ -15,8 +15,11 @@ var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
 
 const cardSize = 50;
+const margin = 20;
 const playerRadius = 10;
+const buttonRadius = 6;
 var extraCardPosition;
+var isDragging = false;
 
 
 
@@ -26,18 +29,24 @@ const cardType = {
     TCROSS: 2,
     CROSS: 3
 }
-const clickableType = {
+const interactiveType = {
     EXTRACARD: 0,
-    HORTOPEDGECARD: 1,
-    HORBOTEDGECARD: 2,
-    VERLEFTEDGECARD: 3,
-    VERRIGHTEDGECARD: 4,
-    PLAYER: 5
+    BUTTON: 1,
+    PLAYER: 2
 }
+const shiftDirection = {
+    DOWN: 0,
+    LEFT: 1,
+    UP: 2,
+    RIGHT: 3
+}
+ 
 
 var lab = [];
 let players = [];
 var clickableShapes = [];
+var draggableShapes = [];
+var buttonShapes = [];
 
 
 var extraCard;
@@ -54,114 +63,74 @@ function setExtraCard(x, y) {
     }
     clickableShapes.push({
         points: [{
-            x: extraCardPosition.x,
-            y: extraCardPosition.y
-        }, {
-            x: extraCardPosition.x + cardSize,
-            y: extraCardPosition.y
-        }, {
-            x: extraCardPosition.x + cardSize,
-            y: extraCardPosition.y + cardSize
-        }, {
-            x: extraCardPosition.x,
-            y: extraCardPosition.y + cardSize
+            x: extraCardPosition.x + margin,
+            y: extraCardPosition.y + margin
         }],
-        cat: clickableType.EXTRACARD
+        cat: interactiveType.EXTRACARD
     });
 }
 
-function setEdgeCards(x, y) {
+
+function setPlayer(pos, id) {
+    draggableShapes.push({
+        points: [{
+            x: pos[0] * cardSize + Math.floor(cardSize/2) + margin,
+            y: pos[1] * cardSize + Math.floor(cardSize/2) + margin
+        }],
+        cat: interactiveType.PLAYER,
+        playerId: id
+    })
+}
+
+function setButtons(x,y) {
     for (var j = 0; j < x; j++) {
         if (j % 2 == 1) {
-            clickableShapes.push({
+            buttonShapes.push({
                 points: [{
-                    x: j * cardSize,
-                    y: 0
-                }, {
-                    x: j * cardSize + cardSize,
-                    y: 0
-                }, {
-                    x: j * cardSize + cardSize,
-                    y: cardSize
-                }, {
-                    x: j * cardSize,
-                    y: cardSize
+                    x: j * cardSize + margin + Math.floor(cardSize/2),
+                    y: 0 + margin/2
                 }],
-                cat: clickableType.HORTOPEDGECARD
+                direction: shiftDirection.DOWN,
+                cat: interactiveType.BUTTON
             });
-            clickableShapes.push({
+            buttonShapes.push({
                 points: [{
-                    x: j * cardSize,
-                    y: (y - 1) * cardSize
-                }, {
-                    x: j * cardSize + cardSize,
-                    y: (y - 1) * cardSize
-                }, {
-                    x: j * cardSize + cardSize,
-                    y: y * cardSize
-                }, {
-                    x: j * cardSize,
-                    y: y * cardSize
+                    x: j * cardSize + margin + Math.floor(cardSize/2),
+                    y: (y) * cardSize + margin + margin/2
                 }],
-                cat: clickableType.HORBOTEDGECARD
+                direction: shiftDirection.UP,
+                cat: interactiveType.BUTTON
             });
         }
     }
     for (var j = 0; j < y; j++) {
         if (j % 2 == 1) {
-            clickableShapes.push({
+            buttonShapes.push({
                 points: [{
-                    y: j * cardSize,
-                    x: 0
-                }, {
-                    y: j * cardSize + cardSize,
-                    x: 0
-                }, {
-                    y: j * cardSize + cardSize,
-                    x: cardSize
-                }, {
-                    y: j * cardSize,
-                    x: cardSize
+                    y: j * cardSize + margin + Math.floor(cardSize/2),
+                    x: 0 + margin/2
                 }],
-                cat: clickableType.VERLEFTEDGECARD
+                direction: shiftDirection.RIGHT,
+                cat: interactiveType.BUTTON
             });
-            clickableShapes.push({
+            buttonShapes.push({
                 points: [{
-                    y: j * cardSize,
-                    x: (x - 1) * cardSize
-                }, {
-                    y: j * cardSize + cardSize,
-                    x: (x - 1) * cardSize
-                }, {
-                    y: j * cardSize + cardSize,
-                    x: x * cardSize
-                }, {
-                    y: j * cardSize,
-                    x: x * cardSize
+                    y: j * cardSize + margin + Math.floor(cardSize/2),
+                    x: (x) * cardSize + margin/2 + margin
                 }],
-                cat: clickableType.VERRIGHTEDGECARD
+                direction: shiftDirection.LEFT,
+                cat: interactiveType.BUTTON
             });
         }
     }
 }
 
-function setPlayer(pos, id) {
-    clickableShapes.push({
-        points: [{
-            x: pos[0] * cardSize + Math.floor(cardSize/2),
-            y: pos[1] * cardSize + Math.floor(cardSize/2)
-        }],
-        cat: clickableType.PLAYER,
-        playerId: id
-    })
-}
-
 function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed stones + fill random cards
-    canvas.width = x * cardSize + 2 * cardSize;
-    canvas.height = y * cardSize;
+    canvas.width = x * cardSize + 2 * cardSize + margin * 2;
+    canvas.height = y * cardSize + margin * 2;
 
     setExtraCard(x, y);
-    setEdgeCards(x, y);
+    setButtons(x, y);
 
     for (var i = 0; i < y; i++) {
         var newRow = [];
@@ -289,11 +258,11 @@ function drawCard(x, y, card) {
 }
 
 function drawCardinLab(i, j, card) {
-    drawCard(i * cardSize + (Math.floor(cardSize / 2)), j * cardSize + Math.floor(cardSize / 2), card);
+    drawCard(i * cardSize + (Math.floor(cardSize / 2)) + margin, j * cardSize + Math.floor(cardSize / 2) + margin, card);
 }
 
 function drawXCard() {
-    drawCard(extraCardPosition.x + Math.floor(cardSize / 2), extraCardPosition.y + Math.floor(cardSize / 2), extraCard);
+    drawCard(extraCardPosition.x + Math.floor(cardSize / 2) + margin, extraCardPosition.y + Math.floor(cardSize / 2) + margin, extraCard);
 }
 
 function rotateExtraCard() {
@@ -406,12 +375,32 @@ function drawPlayers() {
 
     for (let i = 0; i < players.length; i ++) {
         if (!players[i].isDragging) {
-            drawPlayer(players[i].currentPosition[0] * cardSize + (Math.floor(cardSize / 2)),players[i].currentPosition[1] * cardSize + (Math.floor(cardSize / 2)))
+            drawPlayer(players[i].currentPosition[0] * cardSize + (Math.floor(cardSize / 2)) + margin,players[i].currentPosition[1] * cardSize + (Math.floor(cardSize / 2)) + margin)
         } else {
             drawPlayer(players[i].draggingPosition[0], players[i].draggingPosition[1])
         }
         
     }
+}
+function drawButton(x,y,direction) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((direction +1) * Math.PI / 2);
+    ctx.fillStyle = 'rgba(200,0,0,0.9)';
+    ctx.strokeStyle = 'rgba(200,0,0,0.9)';
+    ctx.beginPath();
+    ctx.arc(0,0,buttonRadius,0,2*Math.PI);
+    ctx.stroke();
+    ctx.fillText(">", -buttonRadius/2, buttonRadius/2);
+    ctx.restore();
+}
+
+function drawButtons() {
+
+    buttonShapes.forEach((button,index) => {
+        drawButton(button.points[0].x, button.points[0].y, button.direction)
+    })
+
 }
 
 function drawLab() {
@@ -423,133 +412,145 @@ function drawLab() {
     })
     drawXCard();
     drawPlayers();
+    drawButtons();
 }
 
 function defineShape(shape) {
     var points = shape.points;
-    if (shape.cat == clickableType.PLAYER) {
-        console.log("In Define Shape -> Player");
-        ctx.beginPath();
-        ctx.arc(shape.points[0].x,shape.points[0].y,playerRadius,0,2*Math.PI);
-    } else {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (var i = 1; i < points.length; i++) {
-            ctx.lineTo(points[i].x, points[i].y);
-        }
+    switch(shape.cat) {
+        case interactiveType.PLAYER:
+            ctx.beginPath();
+            ctx.arc(shape.points[0].x,shape.points[0].y,playerRadius,0,2*Math.PI);
+            break;
+        case interactiveType.BUTTON:
+            ctx.beginPath();
+            ctx.arc(shape.points[0].x,shape.points[0].y,buttonRadius,0,2*Math.PI);
+            break;
+        case interactiveType.EXTRACARD:
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            ctx.lineTo(points[0].x + cardSize, points[0].y);
+            ctx.lineTo(points[0].x + cardSize, points[0].y + cardSize);
+            ctx.lineTo(points[0].x, points[0].y + cardSize);
+            break;
+        default:
+            break;
     }
-    
 }
 
 function handleMouseDown(x, y) {
-    clickableShapes.forEach((shape, index) => {
+    isDragging = false;
+    draggableShapes.forEach((shape, index) => {
         defineShape(shape);
-        //console.log(shape);
-        //console.log(x, y);
-        // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
-        
-
             switch (shape.cat) {
-                case clickableType.EXTRACARD:
-                    rotateExtraCard();
-                    break;
-                case clickableType.HORTOPEDGECARD:
-                    shiftRow(shape.points[0].x / cardSize, true);
-                    if (findPath([0, 0], [3, 5], lab, [[0, 0]])) {
-                        console.log('path found!');
-                        drawPath([...shortestPath, [3, 5]]);
-                    } else {
-                        console.log('path not found')
-                    };
-                    break;
-                case clickableType.HORBOTEDGECARD:
-                    shiftRow(shape.points[0].x / cardSize, false);
-                    if (findPath([0, 0], [3, 5], lab, [[0, 0]])) {
-                        console.log('path found!');
-                        drawPath([...shortestPath, [3, 5]]);
-                    } else {
-                        console.log('path not found')
-                    };
-                    break;
-                case clickableType.VERLEFTEDGECARD:
-                    shiftLine(shape.points[0].y / cardSize, true);
-                    if (findPath([0, 0], [3, 5], lab)) {
-                        console.log('path found!');
-                        drawPath([...shortestPath, [3, 5]]);
-                    } else {
-                        console.log('path not found')
-                    };
-                    break;
-                case clickableType.VERRIGHTEDGECARD:
-                    shiftLine(shape.points[0].y / cardSize, false);
-                    if (findPath([0, 0], [3, 5], lab)) {
-                        console.log('path found!');
-                        drawPath([...shortestPath, [3, 5]]);
-                    } else {
-                        console.log('path not found')
-                    };
-                    break;
-                case clickableType.PLAYER:
-                    console.log("Is Player");
+                case interactiveType.PLAYER:
+                    isDragging = true;
                     players[shape.playerId].isDragging = true;
-                    players[shape.playerId].draggingPosition = [x,y]
                     break;
                 default:
-                    drawLab();
                     break;
             }
         }
     })
-
+    if (!isDragging) {
+        clickableShapes.forEach((shape, index) => {
+            defineShape(shape);
+            if (ctx.isPointInPath(x, y)) {
+                switch (shape.cat) {
+                    case interactiveType.EXTRACARD:
+                        rotateExtraCard();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        })
+        buttonShapes.forEach((shape) => {
+            defineShape(shape);
+            if (ctx.isPointInPath(x, y)) {
+                switch (shape.direction) {
+                    
+                    case shiftDirection.DOWN:
+                        shiftRow((shape.points[0].x - cardSize/2 - margin) / cardSize, true);
+                        break;
+                    case shiftDirection.UP:
+                        shiftRow((shape.points[0].x - cardSize/2 - margin) / cardSize, false);
+                        break;
+                    case shiftDirection.RIGHT:
+                        shiftLine((shape.points[0].y - cardSize/2 - margin) / cardSize, true);
+                        break;
+                    case shiftDirection.LEFT:
+                        shiftLine((shape.points[0].y - cardSize/2 - margin) / cardSize, false);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        })
+    }
+ 
 }
 
 function handleMouseMove(x, y) {
     var mouseout = true;
-    clickableShapes.forEach((shape, index) => {
-        defineShape(shape);
-        // test if the mouse is in the current shape
-        if (ctx.isPointInPath(x, y)) {
-            switch (shape.cat) {
-                case clickableType.PLAYER:
-                    players[shape.playerId].draggingPosition = [x,y];
-                    shape.points[0] = {x:x,y:y};
-                    break;
-                case clickableType.EXTRACARD:
-                    markExtraCard();
-                    mouseout = false;
-                    break;
-                case clickableType.HORTOPEDGECARD || clickableType.HORBOTEDGECARD:
-                    markMovableVerLine(shape.points[0].x, (lab.length - 1) * cardSize);
-                    mouseout = false;
-                    break;
-                case clickableType.VERLEFTEDGECARD || clickableType.VERRIGHTEDGECARD:
-                    markMovableHorLine((lab[0].length - 1) * cardSize, shape.points[0].y);
-                    mouseout = false;
-                    break;
+    if (isDragging) {
+        draggableShapes.forEach((shape, index) => {
+            
+                switch (shape.cat) {
+                    case interactiveType.PLAYER:
+                        if (players[shape.playerId].isDragging) {
+                        players[shape.playerId].draggingPosition = [x,y];
+                        shape.points[0] = {x:x,y:y};
+                        drawLab(); }
+                        break;
+                    default:
+                        break;
+                }
+    
+        });
+    }
+    /*if (!isDragging) {
+        clickableShapes.forEach((shape, index) => {
+            defineShape(shape);
+            // test if the mouse is in the current shape
+            if (ctx.isPointInPath(x, y)) {
+                switch (shape.cat) {
+                    case interactiveType.EXTRACARD:
+                        markExtraCard();
+                        mouseout = false;
+                        break;
+                    case interactiveType.HORTOPEDGECARD || interactiveType.HORBOTEDGECARD:
+                        markMovableVerLine(shape.points[0].x, (lab.length - 1) * cardSize);
+                        mouseout = false;
+                        break;
+                    case interactiveType.VERLEFTEDGECARD || interactiveType.VERRIGHTEDGECARD:
+                        markMovableHorLine((lab[0].length - 1) * cardSize, shape.points[0].y);
+                        mouseout = false;
+                        break;
+                }
             }
-        }
-
-    });
-    if (mouseout) { drawLab() }
+        });
+    }*/
+    
 }
 
 function getCardFromMousePosition(x,y) {
-    let xIndex = Math.floor(x/cardSize);
-    let yIndex = Math.floor(y/cardSize);
-    if (xIndex < lab.length & (yIndex < lab[0].length)) {
+    let xIndex = Math.floor((x - margin)/cardSize);
+    let yIndex = Math.floor((y - margin)/cardSize);
+    if ((xIndex < lab.length) & (yIndex < lab[0].length)) {
         return [xIndex,yIndex]
     }
     return undefined
 }
 
 function handleMouseUp(x, y) {
-    clickableShapes.forEach((shape, index) => {
+    draggableShapes.forEach((shape, index) => {
         defineShape(shape);
         // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
             switch (shape.cat) {
-                case clickableType.PLAYER:
+                case interactiveType.PLAYER:
                     //getCard
                     //if Card test Path
                     //if Path move Player
@@ -557,7 +558,7 @@ function handleMouseUp(x, y) {
                     if (card) {
                         if (findPath(players[shape.playerId].currentPosition, card, lab)) {
                             players[shape.playerId].currentPosition = card;
-                            shape.points[0] = {x: x, y:y};
+                            shape.points[0] = {x: card[0], y:card[1]};
                     } else {
                         shape.points[0] = {x: players[shape.playerId].currentPosition[0]*cardSize +(cardSize/2), y:players[shape.playerId].currentPosition[1]*cardSize + (cardSize/2)};
                     }
@@ -566,6 +567,7 @@ function handleMouseUp(x, y) {
                     }
                      
                     players[shape.playerId].isDragging = false;
+                    isDragging = false;
                     
                     break;
                 default: break;
@@ -594,7 +596,8 @@ canvas.addEventListener('mouseup', e => {
 
 
 window.onload = () => {
-    initLab(7, 7);
-    initPlayers(3,7,7);
+    initLab(5, 5);
+    initPlayers(2,5,5);
     drawLab();
+
 }
