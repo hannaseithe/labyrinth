@@ -1,5 +1,54 @@
 var config,data,ctx;
 
+function markExtraCard() {
+    drawLab(config,data,ctx);
+    ctx.save();
+    ctx.translate(config.extraCardPosition.x, config.extraCardPosition.y);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
+    ctx.strokeRect(0, 0, config.cardSize, config.cardSize);
+    ctx.restore();
+}
+
+function markMovableVerLine(x, y) {
+    drawLab(config,data,ctx);
+    ctx.save();
+    ctx.translate(x, 0);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
+    ctx.strokeRect(0, 0, config.cardSize, y + config.cardSize);
+    ctx.restore();
+}
+
+function markMovableHorLine(x, y) {
+    drawLab(config,data,ctx);
+    ctx.save();
+    ctx.translate(0, y);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
+    ctx.strokeRect(0, 0, x + config.cardSize, config.cardSize);
+    ctx.restore();
+}
+
+function drawPath(pfad) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(25,25,0,0.8)';
+    pfad.forEach((field1, index, array) => {
+        if (index < array.length - 1) {
+            ctx.save();
+            ctx.translate(field1[1] * config.cardSize + (Math.floor(config.cardSize / 2)),
+                field1[0] * config.cardSize + Math.floor(config.cardSize / 2));
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo((array[index + 1][1] - field1[1]) * config.cardSize,
+                (array[index + 1][0] - field1[0]) * config.cardSize);
+            ctx.stroke();
+            ctx.restore();
+        }
+    })
+}
+
+
 function drawCard(x, y, card) {
     ctx.save();
     ctx.translate(x, y);

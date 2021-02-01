@@ -122,7 +122,7 @@ Card1 unterhalb von Card2:
        
     >- lab.js auseinander nehmen -> wird zu groß
         - drawLab.js
-        - initLab.js
+        >- initLab.js
 
     ?- automization of margins etc.
 

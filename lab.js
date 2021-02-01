@@ -11,6 +11,7 @@
 
 import { findPath } from './findPath.js';
 import {  drawLab  } from './drawLab.js';
+import { initLab, initPlayers   } from './initLab.js';
 
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
@@ -47,145 +48,6 @@ const data = {
     clickableShapes: [],
     isDragging: false,
     extraCard: undefined
-}
- 
-
-function setExtraCard(x, y) {
-    data.extraCard = {
-        shape: Math.floor(Math.random() * 4) % 4,
-        orientation: Math.floor(Math.random() * 4) % 4,
-        fixed: false
-    };
-    config.extraCardPosition = {
-        x: x * config.cardSize + config.cardSize,
-        y: 0
-    };
-    data.clickableShapes.push({
-        points: [{
-            x: config.extraCardPosition.x + config.margin,
-            y: config.extraCardPosition.y + config.margin
-        }],
-        cat: config.interactiveType.EXTRACARD
-    });
-}
-
-
-function setPlayer(pos, id) {
-    draggableShapes.push({
-        points: [{
-            x: pos[0] * cardSize + Math.floor(cardSize/2) + config.margin,
-            y: pos[1] * config.cardSize + Math.floor(config.cardSize/2) + config.margin
-        }],
-        cat: config.interactiveType.PLAYER,
-        playerId: id
-    })
-}
-
-function setButtons(x,y) {
-    for (var j = 0; j < x; j++) {
-        if (j % 2 == 1) {
-            data.buttonShapes.push({
-                points: [{
-                    x: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    y: 0 + config.margin/2
-                }],
-                direction: config.shiftDirection.DOWN,
-                cat: config.interactiveType.BUTTON
-            });
-            data.buttonShapes.push({
-                points: [{
-                    x: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    y: (y) * config.cardSize + config.margin + config.margin/2
-                }],
-                direction: config.shiftDirection.UP,
-                cat: config.interactiveType.BUTTON
-            });
-        }
-    }
-    for (var j = 0; j < y; j++) {
-        if (j % 2 == 1) {
-            data.buttonShapes.push({
-                points: [{
-                    y: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    x: 0 + config.margin/2
-                }],
-                direction: config.shiftDirection.RIGHT,
-                cat: config.interactiveType.BUTTON
-            });
-            data.buttonShapes.push({
-                points: [{
-                    y: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    x: (x) * config.cardSize + config.margin/2 + config.margin
-                }],
-                direction: config.shiftDirection.LEFT,
-                cat: config.interactiveType.BUTTON
-            });
-        }
-    }
-}
-
-function initLab(x, y) { // create Lab var mit width:x and height:y + set fixed stones + fill random cards
-    canvas.width = x * config.cardSize + 2 * config.cardSize + config.margin * 2;
-    canvas.height = y * config.cardSize + config.margin * 2;
-
-    setExtraCard(x, y);
-    setButtons(x, y);
-
-    for (var i = 0; i < y; i++) {
-        var newRow = [];
-        for (var j = 0; j < x; j++) {
-            var newCard = {
-                shape: Math.floor(Math.random() * 4) % 4,
-                orientation: Math.floor(Math.random() * 4) % 4,
-                fixed: ((i % 2 == 0) && (j % 2 == 0)),
-                number: undefined
-            };
-            newRow.push(newCard);
-        }
-        data.lab.push(newRow)
-    }
-
-    let amountNumbers = Math.floor((x*y)/3); 
-    for (let i=0; i < amountNumbers; i++) {
-        let numberSet = false;
-        while (!numberSet) {
-            let randomX = Math.floor(Math.random() * x);
-            let randomY = Math.floor(Math.random() * y);
-            console.log("randomX & randomY",randomX, randomY);
-            if (!data.lab[randomX][randomY].number) {
-                console.log("!data.lab.number")
-                data.lab[randomX][randomY].number = i + 1;
-                numberSet = true;
-            }
-        }
-        
-    }
-}
-
-function initPlayers(amountPlayers, x, y) {
-    let amountNumbers = Math.floor((x*y)/3);
-    console.log("amountNumbers",amountNumbers);
-    let usedNumbers = new Array(amountNumbers);
-    for (let i = 0; i < amountPlayers; i++) {
-        let indexX = (i % 2) * (x-1);
-        let indexY = ((Math.floor(i/2)) % 2) * (y-1);
-        let listNumbers = [];
-        for (let j = 0; j < Math.floor(amountNumbers/amountPlayers); j++) {
-            let newNumber = Math.floor(Math.random() * amountNumbers) ;
-            while (usedNumbers[newNumber]) {
-                newNumber = Math.floor(Math.random()* amountNumbers);  
-                }
-            usedNumbers[newNumber] = true;
-            listNumbers.push({number: newNumber + 1, solved: false})
-            }
-        data.players[i] = {
-            currentIndex: [indexX,indexY],
-            listNumbers: listNumbers,
-            isDragging: false,
-            draggingPosition: [],
-            cat: config.interactiveType.PLAYER
-        };
-    }
 }
 
 function rotateExtraCard() {
@@ -235,55 +97,6 @@ function shiftLine(line, right) {
 
 }
 
-function markExtraCard() {
-    drawLab(config,data,ctx);
-    ctx.save();
-    ctx.translate(config.extraCardPosition.x, config.extraCardPosition.y);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
-    ctx.strokeRect(0, 0, config.cardSize, config.cardSize);
-    ctx.restore();
-}
-
-function markMovableVerLine(x, y) {
-    drawLab(config,data,ctx);
-    ctx.save();
-    ctx.translate(x, 0);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
-    ctx.strokeRect(0, 0, config.cardSize, y + config.cardSize);
-    ctx.restore();
-}
-
-function markMovableHorLine(x, y) {
-    drawLab(config,data,ctx);
-    ctx.save();
-    ctx.translate(0, y);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(200,200,200,0.9)';
-    ctx.strokeRect(0, 0, x + config.cardSize, config.cardSize);
-    ctx.restore();
-}
-
-function drawPath(pfad) {
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(25,25,0,0.8)';
-    pfad.forEach((field1, index, array) => {
-        if (index < array.length - 1) {
-            ctx.save();
-            ctx.translate(field1[1] * config.cardSize + (Math.floor(config.cardSize / 2)),
-                field1[0] * config.cardSize + Math.floor(config.cardSize / 2));
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo((array[index + 1][1] - field1[1]) * config.cardSize,
-                (array[index + 1][0] - field1[0]) * config.cardSize);
-            ctx.stroke();
-            ctx.restore();
-        }
-    })
-}
-
-
 
 function defineShape(shape) {
     var points = shape.points;
@@ -312,6 +125,15 @@ function defineShape(shape) {
         default:
             break;
     }
+}
+
+function getCardFromMousePosition(x,y) {
+    let xIndex = Math.floor((x - config.margin)/config.cardSize);
+    let yIndex = Math.floor((y - config.margin)/config.cardSize);
+    if ((xIndex < data.lab.length) & (yIndex < data.lab[0].length)) {
+        return [xIndex,yIndex]
+    }
+    return undefined
 }
 
 function handleMouseDown(x, y) {
@@ -409,15 +231,6 @@ function handleMouseMove(x, y) {
     
 }
 
-function getCardFromMousePosition(x,y) {
-    let xIndex = Math.floor((x - config.margin)/config.cardSize);
-    let yIndex = Math.floor((y - config.margin)/config.cardSize);
-    if ((xIndex < data.lab.length) & (yIndex < data.lab[0].length)) {
-        return [xIndex,yIndex]
-    }
-    return undefined
-}
-
 function handleMouseUp(x, y) {
     data.players.forEach((shape, index) => {
         defineShape(shape);
@@ -465,8 +278,7 @@ canvas.addEventListener('mouseup', e => {
 
 
 window.onload = () => {
-    initLab(5, 5);
+    initLab(5, 5, config,data,canvas);
     initPlayers(2,5,5);
     drawLab(config,data,ctx);
-
 }
