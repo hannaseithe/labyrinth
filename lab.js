@@ -55,14 +55,38 @@ function rotateExtraCard() {
     drawLab(config,data,ctx);
 }
 
+function playersinRow(row) {
+    var result = [];
+    data.players.forEach((player) => {
+        if (player.currentIndex[0] == row) {
+            result.push(player)
+        }
+    })
+    return result;
+}
+
+function playersinLine(line) {
+    var result = [];
+    data.players.forEach((player) => {
+        if (player.currentIndex[1] == line) {
+            result.push(player)
+        }
+    })
+    return result;
+}
+
 function shiftRow(row, down) {
     var cardonStack = data.extraCard;
     var newCardonStack;
+    var movePlayer = playersinRow(row);
     if (down) {
         data.lab.forEach((line, index) => {
             newCardonStack = line[row];
             line[row] = cardonStack;
             cardonStack = newCardonStack;
+        })
+        movePlayer.forEach((player) => {
+            player.currentIndex[1] = (player.currentIndex[1] + 1) % data.lab.length
         })
     } else {
         for (var i = data.lab.length; i > 0; i--) {
@@ -70,6 +94,9 @@ function shiftRow(row, down) {
             data.lab[i - 1][row] = cardonStack;
             cardonStack = newCardonStack;
         }
+        movePlayer.forEach((player) => {
+            player.currentIndex[1] = (data.lab.length + player.currentIndex[1] - 1) % data.lab.length
+        })
     }
     data.extraCard = newCardonStack;
     drawLab(config,data,ctx);
@@ -79,11 +106,15 @@ function shiftRow(row, down) {
 function shiftLine(line, right) {
     var cardonStack = data.extraCard;
     var newCardonStack;
+    var movePlayer = playersinLine(line);
     if (right) {
         data.lab[line].forEach((card, index, array) => {
             newCardonStack = card;
             array[index] = cardonStack;
             cardonStack = newCardonStack;
+        })
+        movePlayer.forEach((player) => {
+            player.currentIndex[0] = (player.currentIndex[0] + 1) % data.lab[0].length
         })
     } else {
         for (var i = data.lab[0].length; i > 0; i--) {
@@ -91,6 +122,9 @@ function shiftLine(line, right) {
             data.lab[line][i - 1] = cardonStack;
             cardonStack = newCardonStack;
         }
+        movePlayer.forEach((player) => {
+            player.currentIndex[0] = (data.lab.length + player.currentIndex[0] - 1) % data.lab[0].length
+        })
     }
     data.extraCard = newCardonStack;
     drawLab(config,data,ctx);

@@ -118,17 +118,15 @@ Card1 unterhalb von Card2:
         - use buttons outside board to shift cards"
     - mich stört es total dass ich clickableShapes getrennt von den eigentlichen Shapes pflege
         - das ist doppelt gemoppelt! Insbesondere was die Player angeht -> vielleicht kann man die Player zusammnführen?
-    
-       
-    >- lab.js auseinander nehmen -> wird zu groß
+    - lab.js auseinander nehmen -> wird zu groß
         - drawLab.js
-        >- initLab.js
-
+        - initLab.js
     ?- automization of margins etc.
 
         
-    - move Player with card        
+    >- move Player with card        
         -Rausschieben von Player implementieren
+    - kein Player auf Player zulassen
 
     - Implementierung von Abarbeitung der Liste
 
