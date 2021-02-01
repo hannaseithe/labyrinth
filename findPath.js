@@ -1,8 +1,4 @@
 /*****
-Fragen: - wie finde ich die aktuelle Zielkarte an Hand der Nummer der Goals?
-
-
-Pathfinding?
         - "weg nach oben" : 
             corner -> card.orientation      == (0 || 3)
             straight -> card.orientation    == (0 || 2)

@@ -119,9 +119,12 @@ Card1 unterhalb von Card2:
     - mich stört es total dass ich clickableShapes getrennt von den eigentlichen Shapes pflege
         - das ist doppelt gemoppelt! Insbesondere was die Player angeht -> vielleicht kann man die Player zusammnführen?
     
-    ? markup on mouseover?
        
     >- lab.js auseinander nehmen -> wird zu groß
+        - drawLab.js
+        - initLab.js
+
+    ?- automization of margins etc.
 
         
     - move Player with card        
@@ -129,5 +132,5 @@ Card1 unterhalb von Card2:
 
     - Implementierung von Abarbeitung der Liste
 
-    - Implementierung von mehreren Playern und Turns
+    - Implementierung von Turns
 
