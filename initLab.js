@@ -109,6 +109,7 @@ export function initPlayers(amountPlayers, x, y) {
     let amountNumbers = Math.floor((x*y)/3);
     console.log("amountNumbers",amountNumbers);
     let usedNumbers = new Array(amountNumbers);
+    data.currentPlayer = 0;
     for (let i = 0; i < amountPlayers; i++) {
         let indexX = (i % 2) * (x-1);
         let indexY = ((Math.floor(i/2)) % 2) * (y-1);
@@ -126,7 +127,8 @@ export function initPlayers(amountPlayers, x, y) {
             listNumbers: listNumbers,
             isDragging: false,
             draggingPosition: [],
-            cat: config.interactiveType.PLAYER
+            cat: config.interactiveType.PLAYER,
+            name: "Player " + i
         };
     }
 }

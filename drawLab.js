@@ -168,6 +168,18 @@ function drawButtons() {
 
 }
 
+function drawDisplay() {
+    ctx.save();
+    ctx.translate(config.extraCardPosition.x + config.margin, 
+        config.extraCardPosition.y + config.cardSize *1.5 + config.margin);
+    ctx.fillStyle = 'rgba(200,0,0,0.9)';
+    ctx.strokeStyle = 'rgba(200,0,0,0.9)';
+    ctx.beginPath();
+    ctx.stroke();
+    ctx.fillText(data.players[data.currentPlayer].name, -config.buttonRadius/2, config.buttonRadius/2);
+    ctx.restore();
+}
+
 export function drawLab(con,dat,c) {
     config = con;
     data = dat;
@@ -181,4 +193,5 @@ export function drawLab(con,dat,c) {
     drawXCard();
     drawPlayers();
     drawButtons();
+    drawDisplay();
 }
