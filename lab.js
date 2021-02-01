@@ -180,12 +180,18 @@ function initPlayers(amountPlayers, x, y) {
             listNumbers.push({number: newNumber + 1, solved: false})
             }
         players[i] = {
-            currentPosition: [indexX,indexY],
+            currentIndex: [indexX,indexY],
             listNumbers: listNumbers,
             isDragging: false,
-            draggingPosition: []
+            draggingPosition: [],
+            /*points: [{
+                x: pos[0] * cardSize + Math.floor(cardSize/2) + margin,
+                y: pos[1] * cardSize + Math.floor(cardSize/2) + margin
+            }],*/
+            cat: interactiveType.PLAYER
         };
-        setPlayer(players[i].currentPosition,i)
+        
+       /* setPlayer(players[i].currentPosition,i)*/
     }
     console.log(players);
 }
@@ -375,7 +381,8 @@ function drawPlayers() {
 
     for (let i = 0; i < players.length; i ++) {
         if (!players[i].isDragging) {
-            drawPlayer(players[i].currentPosition[0] * cardSize + (Math.floor(cardSize / 2)) + margin,players[i].currentPosition[1] * cardSize + (Math.floor(cardSize / 2)) + margin)
+            drawPlayer(players[i].currentIndex[0] * cardSize + (Math.floor(cardSize / 2)) + margin,
+            players[i].currentIndex[1] * cardSize + (Math.floor(cardSize / 2)) + margin)
         } else {
             drawPlayer(players[i].draggingPosition[0], players[i].draggingPosition[1])
         }
@@ -420,7 +427,13 @@ function defineShape(shape) {
     switch(shape.cat) {
         case interactiveType.PLAYER:
             ctx.beginPath();
-            ctx.arc(shape.points[0].x,shape.points[0].y,playerRadius,0,2*Math.PI);
+            if (!shape.isDragging) {
+                ctx.arc((shape.currentIndex[0] * cardSize) + cardSize/2 + margin,
+                (shape.currentIndex[1] * cardSize) + cardSize/2 + margin,playerRadius,0,2*Math.PI);
+            } else {
+                ctx.arc(shape.draggingPosition[0],shape.draggingPosition[1],playerRadius,0,2*Math.PI);
+            }
+            
             break;
         case interactiveType.BUTTON:
             ctx.beginPath();
@@ -440,13 +453,13 @@ function defineShape(shape) {
 
 function handleMouseDown(x, y) {
     isDragging = false;
-    draggableShapes.forEach((shape, index) => {
+    players.forEach((shape, index) => {
         defineShape(shape);
         if (ctx.isPointInPath(x, y)) {
             switch (shape.cat) {
                 case interactiveType.PLAYER:
                     isDragging = true;
-                    players[shape.playerId].isDragging = true;
+                    shape.isDragging = true;
                     break;
                 default:
                     break;
@@ -495,13 +508,12 @@ function handleMouseDown(x, y) {
 function handleMouseMove(x, y) {
     var mouseout = true;
     if (isDragging) {
-        draggableShapes.forEach((shape, index) => {
+        players.forEach((shape, index) => {
             
                 switch (shape.cat) {
                     case interactiveType.PLAYER:
-                        if (players[shape.playerId].isDragging) {
-                        players[shape.playerId].draggingPosition = [x,y];
-                        shape.points[0] = {x:x,y:y};
+                        if (shape.isDragging) {
+                        shape.draggingPosition = [x,y];
                         drawLab(); }
                         break;
                     default:
@@ -545,7 +557,7 @@ function getCardFromMousePosition(x,y) {
 }
 
 function handleMouseUp(x, y) {
-    draggableShapes.forEach((shape, index) => {
+    players.forEach((shape, index) => {
         defineShape(shape);
         // test if the mouse is in the current shape
         if (ctx.isPointInPath(x, y)) {
@@ -556,17 +568,12 @@ function handleMouseUp(x, y) {
                     //if Path move Player
                     let card = getCardFromMousePosition(x,y);
                     if (card) {
-                        if (findPath(players[shape.playerId].currentPosition, card, lab)) {
-                            players[shape.playerId].currentPosition = card;
-                            shape.points[0] = {x: card[0], y:card[1]};
-                    } else {
-                        shape.points[0] = {x: players[shape.playerId].currentPosition[0]*cardSize +(cardSize/2), y:players[shape.playerId].currentPosition[1]*cardSize + (cardSize/2)};
-                    }
-                    } else {
-                        shape.points[0] = {x: players[shape.playerId].currentPosition[0]*cardSize +(cardSize/2), y:players[shape.playerId].currentPosition[1]*cardSize + (cardSize/2)};
+                        if (findPath(shape.currentIndex, card, lab)) {
+                            shape.currentIndex = card;
+                    } 
                     }
                      
-                    players[shape.playerId].isDragging = false;
+                    shape.isDragging = false;
                     isDragging = false;
                     
                     break;

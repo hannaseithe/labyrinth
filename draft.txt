@@ -116,12 +116,12 @@ Card1 unterhalb von Card2:
         - stop all other clickableShapes, when clicking on 
         - losing player when dragging too fast
         - use buttons outside board to shift cards"
-    >- mich stört es total dass ich clickableShapes getrennt von den eigentlichen Shapes pflege
-        -> das ist doppelt gemoppelt! Insbesondere was die Player angeht -> vielleicht kann man die Player zusammnführen?
+    - mich stört es total dass ich clickableShapes getrennt von den eigentlichen Shapes pflege
+        - das ist doppelt gemoppelt! Insbesondere was die Player angeht -> vielleicht kann man die Player zusammnführen?
     
-        >? markup on mouseover?
+    ? markup on mouseover?
        
-    - lab.js auseinander nehmen -> wird zu groß
+    >- lab.js auseinander nehmen -> wird zu groß
 
         
     - move Player with card        
