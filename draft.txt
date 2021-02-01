@@ -122,13 +122,12 @@ Card1 unterhalb von Card2:
         - drawLab.js
         - initLab.js
     ?- automization of margins etc.
-
-        
-    >- move Player with card        
+    - move Player with card        
         -Rausschieben von Player implementieren
+    
     - kein Player auf Player zulassen
 
-    - Implementierung von Abarbeitung der Liste
+    >- Implementierung von Abarbeitung der Liste
 
     - Implementierung von Turns
 

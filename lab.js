@@ -10,30 +10,30 @@
 // canvas variables
 
 import { findPath } from './findPath.js';
-import {  drawLab  } from './drawLab.js';
-import { initLab, initPlayers   } from './initLab.js';
+import { drawLab } from './drawLab.js';
+import { initLab, initPlayers } from './initLab.js';
 
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
 
 const config = {
-    cardSize : 50,
+    cardSize: 50,
     margin: 20,
     playerRadius: 10,
     buttonRadius: 6,
     extraCardPosition: undefined,
-    cardType : {
+    cardType: {
         CORNER: 0,
         STRAIGHT: 1,
         TCROSS: 2,
         CROSS: 3
     },
-    interactiveType : {
+    interactiveType: {
         EXTRACARD: 0,
         BUTTON: 1,
         PLAYER: 2
     },
-    shiftDirection : {
+    shiftDirection: {
         DOWN: 0,
         LEFT: 1,
         UP: 2,
@@ -52,7 +52,7 @@ const data = {
 
 function rotateExtraCard() {
     data.extraCard.orientation++;
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
 }
 
 function playersinRow(row) {
@@ -99,7 +99,7 @@ function shiftRow(row, down) {
         })
     }
     data.extraCard = newCardonStack;
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
 
 }
 
@@ -127,27 +127,27 @@ function shiftLine(line, right) {
         })
     }
     data.extraCard = newCardonStack;
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
 
 }
 
 
 function defineShape(shape) {
     var points = shape.points;
-    switch(shape.cat) {
+    switch (shape.cat) {
         case config.interactiveType.PLAYER:
             ctx.beginPath();
             if (!shape.isDragging) {
-                ctx.arc((shape.currentIndex[0] * config.cardSize) + config.cardSize/2 + config.margin,
-                (shape.currentIndex[1] * config.cardSize) + config.cardSize/2 + config.margin,config.playerRadius,0,2*Math.PI);
+                ctx.arc((shape.currentIndex[0] * config.cardSize) + config.cardSize / 2 + config.margin,
+                    (shape.currentIndex[1] * config.cardSize) + config.cardSize / 2 + config.margin, config.playerRadius, 0, 2 * Math.PI);
             } else {
-                ctx.arc(shape.draggingPosition[0],shape.draggingPosition[1],config.playerRadius,0,2*Math.PI);
+                ctx.arc(shape.draggingPosition[0], shape.draggingPosition[1], config.playerRadius, 0, 2 * Math.PI);
             }
-            
+
             break;
         case config.interactiveType.BUTTON:
             ctx.beginPath();
-            ctx.arc(shape.points[0].x,shape.points[0].y,config.buttonRadius,0,2*Math.PI);
+            ctx.arc(shape.points[0].x, shape.points[0].y, config.buttonRadius, 0, 2 * Math.PI);
             break;
         case config.interactiveType.EXTRACARD:
             ctx.beginPath();
@@ -161,13 +161,19 @@ function defineShape(shape) {
     }
 }
 
-function getCardFromMousePosition(x,y) {
-    let xIndex = Math.floor((x - config.margin)/config.cardSize);
-    let yIndex = Math.floor((y - config.margin)/config.cardSize);
+function getCardFromMousePosition(x, y) {
+    let xIndex = Math.floor((x - config.margin) / config.cardSize);
+    let yIndex = Math.floor((y - config.margin) / config.cardSize);
     if ((xIndex < data.lab.length) & (yIndex < data.lab[0].length)) {
-        return [xIndex,yIndex]
+        return [xIndex, yIndex]
     }
     return undefined
+}
+
+function noPlayerOnCard(card) {
+    return !data.players.find((player) => {
+        return  player.currentIndex.every(function(value, index) { return value === card[index]})
+    })
 }
 
 function handleMouseDown(x, y) {
@@ -202,18 +208,18 @@ function handleMouseDown(x, y) {
             defineShape(shape);
             if (ctx.isPointInPath(x, y)) {
                 switch (shape.direction) {
-                    
+
                     case config.shiftDirection.DOWN:
-                        shiftRow((shape.points[0].x - config.cardSize/2 - config.margin) / config.cardSize, true);
+                        shiftRow((shape.points[0].x - config.cardSize / 2 - config.margin) / config.cardSize, true);
                         break;
                     case config.shiftDirection.UP:
-                        shiftRow((shape.points[0].x - config.cardSize/2 - config.margin) / config.cardSize, false);
+                        shiftRow((shape.points[0].x - config.cardSize / 2 - config.margin) / config.cardSize, false);
                         break;
                     case config.shiftDirection.RIGHT:
-                        shiftLine((shape.points[0].y - config.cardSize/2 - config.margin) / config.cardSize, true);
+                        shiftLine((shape.points[0].y - config.cardSize / 2 - config.margin) / config.cardSize, true);
                         break;
                     case config.shiftDirection.LEFT:
-                        shiftLine((shape.points[0].y - config.cardSize/2 - config.margin) / config.cardSize, false);
+                        shiftLine((shape.points[0].y - config.cardSize / 2 - config.margin) / config.cardSize, false);
                         break;
                     default:
                         break;
@@ -221,23 +227,24 @@ function handleMouseDown(x, y) {
             }
         })
     }
- 
+
 }
 
 function handleMouseMove(x, y) {
     if (data.isDragging) {
         data.players.forEach((shape, index) => {
-            
-                switch (shape.cat) {
-                    case config.interactiveType.PLAYER:
-                        if (shape.isDragging) {
-                        shape.draggingPosition = [x,y];
-                        drawLab(config,data,ctx); }
-                        break;
-                    default:
-                        break;
-                }
-    
+
+            switch (shape.cat) {
+                case config.interactiveType.PLAYER:
+                    if (shape.isDragging) {
+                        shape.draggingPosition = [x, y];
+                        drawLab(config, data, ctx);
+                    }
+                    break;
+                default:
+                    break;
+            }
+
         });
     }
     /*if (!data.isDragging) {
@@ -262,7 +269,7 @@ function handleMouseMove(x, y) {
             }
         });
     }*/
-    
+
 }
 
 function handleMouseUp(x, y) {
@@ -273,25 +280,28 @@ function handleMouseUp(x, y) {
             switch (shape.cat) {
                 case config.interactiveType.PLAYER:
                     //getCard
-                    //if Card test Path
+                    //if Card test Free
+                    //if Free test Path
                     //if Path move Player
-                    let card = getCardFromMousePosition(x,y);
+                    let card = getCardFromMousePosition(x, y);
                     if (card) {
-                        if (findPath(shape.currentIndex, card, data.lab)) {
-                            shape.currentIndex = card;
-                    } 
+                        if (noPlayerOnCard(card)) {
+                            if (findPath(shape.currentIndex, card, data.lab)) {
+                                shape.currentIndex = card;
+                            }
+                        }
                     }
-                     
+
                     shape.isDragging = false;
                     data.isDragging = false;
-                    
+
                     break;
                 default: break;
             }
         }
 
     });
-     drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
 }
 
 canvas.addEventListener('mousedown', e => {
@@ -312,7 +322,7 @@ canvas.addEventListener('mouseup', e => {
 
 
 window.onload = () => {
-    initLab(5, 5, config,data,canvas);
-    initPlayers(2,5,5);
-    drawLab(config,data,ctx);
+    initLab(5, 5, config, data, canvas);
+    initPlayers(2, 5, 5);
+    drawLab(config, data, ctx);
 }
