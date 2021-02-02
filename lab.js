@@ -170,9 +170,17 @@ function getCardFromMousePosition(x, y) {
     return undefined
 }
 
+function getNextNumberIndex(list) {
+    return list.findIndex((number) => !number.solved);
+}
+
+function cardsEqual(card1, card2) {
+    return card1.length == card2.length && card1.every(function (value, index) { return value === card2[index] })
+}
+
 function noPlayerOnCard(card) {
     return !data.players.find((player) => {
-        return  player.currentIndex.every(function(value, index) { return value === card[index]})
+        return cardsEqual(player.currentIndex,card)
     })
 }
 
@@ -288,6 +296,14 @@ function handleMouseUp(x, y) {
                         if (noPlayerOnCard(card)) {
                             if (findPath(shape.currentIndex, card, data.lab)) {
                                 shape.currentIndex = card;
+                                // test if number on card
+                                let numberOnCard = data.lab[card[1]][card[0]].number;
+                                if (numberOnCard) {
+                                    let nextCardIndex = getNextNumberIndex(shape.listNumbers)
+                                    if (nextCardIndex > -1 && numberOnCard == shape.listNumbers[nextCardIndex].number) {
+                                        shape.listNumbers[nextCardIndex].solved = true;
+                                    }
+                                }
                             }
                         }
                     }

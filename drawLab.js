@@ -1,7 +1,7 @@
-var config,data,ctx;
+var config, data, ctx;
 
 function markExtraCard() {
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
     ctx.save();
     ctx.translate(config.extraCardPosition.x, config.extraCardPosition.y);
     ctx.lineWidth = 3;
@@ -11,7 +11,7 @@ function markExtraCard() {
 }
 
 function markMovableVerLine(x, y) {
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
     ctx.save();
     ctx.translate(x, 0);
     ctx.lineWidth = 3;
@@ -21,7 +21,7 @@ function markMovableVerLine(x, y) {
 }
 
 function markMovableHorLine(x, y) {
-    drawLab(config,data,ctx);
+    drawLab(config, data, ctx);
     ctx.save();
     ctx.translate(0, y);
     ctx.lineWidth = 3;
@@ -107,7 +107,7 @@ function drawCard(x, y, card) {
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     };
     ctx.strokeRect(-Math.floor(config.cardSize / 2), -Math.floor(config.cardSize / 2), config.cardSize, config.cardSize);
-    
+
     ctx.fillStyle = 'rgba(0,0,150,0.8)';
     if (card.number) {
         ctx.fillText(card.number + ".", Math.floor(config.cardSize / 5), Math.floor(config.cardSize / 3))
@@ -124,63 +124,69 @@ function drawXCard() {
     drawCard(config.extraCardPosition.x + Math.floor(config.cardSize / 2) + config.margin, config.extraCardPosition.y + Math.floor(config.cardSize / 2) + config.margin, data.extraCard);
 }
 
-function drawPlayer(x,y) {
-    console.log(x,y);
+function drawPlayer(x, y) {
+    console.log(x, y);
     ctx.save();
     ctx.translate(x, y);
     ctx.fillStyle = 'rgba(200,0,0,0.9)';
     ctx.beginPath();
-    ctx.arc(0,0,config.playerRadius,0,2*Math.PI);
+    ctx.arc(0, 0, config.playerRadius, 0, 2 * Math.PI);
     ctx.fill()
     ctx.restore();
 }
 
 function drawPlayers() {
 
-    for (let i = 0; i < data.players.length; i ++) {
+    for (let i = 0; i < data.players.length; i++) {
         if (!data.players[i].isDragging) {
             drawPlayer(data.players[i].currentIndex[0] * config.cardSize + (Math.floor(config.cardSize / 2)) + config.margin,
-            data.players[i].currentIndex[1] * config.cardSize + (Math.floor(config.cardSize / 2)) + config.margin)
+                data.players[i].currentIndex[1] * config.cardSize + (Math.floor(config.cardSize / 2)) + config.margin)
         } else {
             drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1])
         }
-        
+
     }
 }
-function drawButton(x,y,direction) {
+function drawButton(x, y, direction) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate((direction +1) * Math.PI / 2);
+    ctx.rotate((direction + 1) * Math.PI / 2);
     ctx.fillStyle = 'rgba(200,0,0,0.9)';
     ctx.strokeStyle = 'rgba(200,0,0,0.9)';
     ctx.beginPath();
-    ctx.arc(0,0,config.buttonRadius,0,2*Math.PI);
+    ctx.arc(0, 0, config.buttonRadius, 0, 2 * Math.PI);
     ctx.stroke();
-    ctx.fillText(">", -config.buttonRadius/2, config.buttonRadius/2);
+    ctx.fillText(">", -config.buttonRadius / 2, config.buttonRadius / 2);
     ctx.restore();
 }
 
 function drawButtons() {
 
-    data.buttonShapes.forEach((button,index) => {
+    data.buttonShapes.forEach((button, index) => {
         drawButton(button.points[0].x, button.points[0].y, button.direction)
     })
 
 }
 
 function drawDisplay() {
+    let cp = data.players[data.currentPlayer];
     ctx.save();
-    ctx.translate(config.extraCardPosition.x + config.margin, 
-        config.extraCardPosition.y + config.cardSize *1.5 + config.margin);
+    ctx.translate(config.extraCardPosition.x + config.margin,
+        config.extraCardPosition.y + config.cardSize * 1.5 + config.margin);
     ctx.fillStyle = 'rgba(200,0,0,0.9)';
     ctx.strokeStyle = 'rgba(200,0,0,0.9)';
     ctx.beginPath();
-    ctx.stroke();
-    ctx.fillText(data.players[data.currentPlayer].name, -config.buttonRadius/2, config.buttonRadius/2);
+    ctx.fillText(cp.name, -config.buttonRadius / 2, config.buttonRadius / 2);
+    for (let i = 0; i < cp.listNumbers.length; i++) {
+        ctx.fillText(cp.listNumbers[i].number, -config.buttonRadius / 2, config.buttonRadius / 2 + (i + 1) * 15)
+        if (cp.listNumbers[i].solved) {
+            ctx.fillText("x", -config.buttonRadius / 2 + 8, config.buttonRadius / 2 + (i + 1) * 15)
+        }
+    }
     ctx.restore();
 }
 
-export function drawLab(con,dat,c) {
+export function drawLab(con, dat, c) {
     config = con;
     data = dat;
     ctx = c;

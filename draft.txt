@@ -127,9 +127,9 @@ Card1 unterhalb von Card2:
     
     - kein Player auf Player zulassen
 
-    >- Implementierung von Abarbeitung der Liste
+    - Implementierung von Abarbeitung der Liste
         - Anzeigen von Liste
-        - Abhacken bei MouseUp
+        - Abhaken bei MouseUp
 
-    - Implementierung von Turns
+    >- Implementierung von Turns
 
