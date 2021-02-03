@@ -167,14 +167,17 @@ function drawButton(x, y, direction, enabled) {
 }
 
 function drawButtons() {
-
     data.buttonShapes.forEach((button, index) => {
         let point = getButtonPixels(button);
         drawButton(point[0], point[1], button.direction, button.enabled);
-
-
     })
-
+    data.rectangleButtons.forEach((button)=> {
+        ctx.save();
+        ctx.translate(button.points[0].x,button.points[0].y);
+        ctx.strokeRect(0, 0, button.width, button.height);
+        ctx.fillText(button.label, 2,Math.floor(button.height * 2/3));
+        ctx.restore();
+    })
 }
 
 function drawDisplay() {
@@ -185,11 +188,13 @@ function drawDisplay() {
     ctx.fillStyle = 'rgba(200,0,0,0.9)';
     ctx.strokeStyle = 'rgba(200,0,0,0.9)';
     ctx.beginPath();
+    ctx.font = "bold 14px Arial ";
     ctx.fillText(cp.name, -config.buttonRadius / 2, config.buttonRadius / 2);
+    ctx.font = "normal 14px Arial ";
     for (let i = 0; i < cp.listNumbers.length; i++) {
-        ctx.fillText(cp.listNumbers[i].number, -config.buttonRadius / 2, config.buttonRadius / 2 + (i + 1) * 15)
+        ctx.fillText(cp.listNumbers[i].number, -config.buttonRadius / 2, config.buttonRadius / 2 + (i + 1) * 15 + 5)
         if (cp.listNumbers[i].solved) {
-            ctx.fillText("x", -config.buttonRadius / 2 + 8, config.buttonRadius / 2 + (i + 1) * 15)
+            ctx.fillText("x", -config.buttonRadius / 2 + 8, config.buttonRadius / 2 + (i + 1) * 15 + 5)
         }
     }
     ctx.restore();

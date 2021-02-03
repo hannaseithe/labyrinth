@@ -19,6 +19,24 @@ function initExtraCard(x, y) {
     });
 }
 
+function initEndTurnButton(x,y) {
+    config.endTurnButtonPosition = {
+        x: config.extraCardPosition.x,
+        y: 200
+    }
+
+    data.rectangleButtons.push({
+        cat: config.interactiveType.ENDTURNBUTTON,
+        points: [{
+            x: config.endTurnButtonPosition.x + config.margin,
+            y: config.endTurnButtonPosition.y + config.margin
+        }],
+        width: config.cardSize,
+        height: Math.floor(config.cardSize/2),
+        label: 'End Turn'
+    })
+}
+
 
 function initButtons(x,y) {
     for (var j = 0; j < x; j++) {
@@ -77,6 +95,7 @@ export function initLab(x, y, c,d, can) { // create Lab var mit width:x and heig
 
     initExtraCard(x, y);
     initButtons(x, y);
+    initEndTurnButton();
 
     for (var i = 0; i < y; i++) {
         var newRow = [];

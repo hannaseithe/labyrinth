@@ -31,7 +31,8 @@ const config = {
     interactiveType: {
         EXTRACARD: 0,
         BUTTON: 1,
-        PLAYER: 2
+        PLAYER: 2,
+        ENDTURNBUTTON: 3
     },
     shiftDirection: {
         DOWN: 0,
@@ -46,6 +47,7 @@ const data = {
     players: [],
     buttonShapes: [],
     clickableShapes: [],
+    rectangleButtons: [],
     isDragging: false,
     extraCard: undefined,
     game: {}
@@ -79,7 +81,7 @@ function playersinLine(line) {
 function shiftCards(index, direction) {
     var cardonStack = data.extraCard;
     var newCardonStack;
-    
+
     switch (direction) {
         case config.shiftDirection.DOWN:
             var movePlayer = playersinRow(index);
@@ -105,26 +107,26 @@ function shiftCards(index, direction) {
             break;
         case config.shiftDirection.RIGHT:
             var movePlayer = playersinLine(index);
-                data.lab[index].forEach((card, ind, array) => {
-                    newCardonStack = card;
-                    array[ind] = cardonStack;
-                    cardonStack = newCardonStack;
-                })
-                movePlayer.forEach((player) => {
-                    player.currentIndex[0] = (player.currentIndex[0] + 1) % data.lab[0].length
-                });
-                break;
-            case config.shiftDirection.LEFT:
-                var movePlayer = playersinLine(index);
-                for (var i = data.lab[0].length; i > 0; i--) {
-                    newCardonStack = data.lab[index][i - 1];
-                    data.lab[index][i - 1] = cardonStack;
-                    cardonStack = newCardonStack;
-                }
-                movePlayer.forEach((player) => {
-                    player.currentIndex[0] = (data.lab.length + player.currentIndex[0] - 1) % data.lab[0].length
-                });
-                break;
+            data.lab[index].forEach((card, ind, array) => {
+                newCardonStack = card;
+                array[ind] = cardonStack;
+                cardonStack = newCardonStack;
+            })
+            movePlayer.forEach((player) => {
+                player.currentIndex[0] = (player.currentIndex[0] + 1) % data.lab[0].length
+            });
+            break;
+        case config.shiftDirection.LEFT:
+            var movePlayer = playersinLine(index);
+            for (var i = data.lab[0].length; i > 0; i--) {
+                newCardonStack = data.lab[index][i - 1];
+                data.lab[index][i - 1] = cardonStack;
+                cardonStack = newCardonStack;
+            }
+            movePlayer.forEach((player) => {
+                player.currentIndex[0] = (data.lab.length + player.currentIndex[0] - 1) % data.lab[0].length
+            });
+            break;
     }
     data.extraCard = newCardonStack;
     disableAllButtons();
@@ -138,7 +140,7 @@ function initGame() {
 }
 
 function logPlayerPosition(card) { }
-function logShift(index, direction) { 
+function logShift(index, direction) {
     let turns = data.game.turns;
     turns[turns.length - 1].shift = {
         index: index,
@@ -170,7 +172,7 @@ function disableLastShiftButton() {
         let button = getButtonfromShift(lastShift);
         button.enabled = false;
     }
-    
+
 }
 
 function enableAllButtons() {
@@ -216,6 +218,12 @@ function defineShape(shape) {
             ctx.lineTo(points[0].x + config.cardSize, points[0].y + config.cardSize);
             ctx.lineTo(points[0].x, points[0].y + config.cardSize);
             break;
+        case config.interactiveType.ENDTURNBUTTON:
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            ctx.lineTo(points[0].x + shape.width, points[0].y);
+            ctx.lineTo(points[0].x + shape.width, points[0].y + shape.height);
+            ctx.lineTo(points[0].x, points[0].y + shape.height);
         default:
             break;
     }
@@ -325,6 +333,20 @@ function handleMouseDown(x, y) {
                             break;
                     }
                 }
+            }
+        });
+        data.rectangleButtons.forEach((shape) => {
+            defineShape(shape);
+            if (ctx.isPointInPath(x, y)) {
+
+                switch (shape.cat) {
+                    case config.interactiveType.ENDTURNBUTTON:
+                        endTurn(data.players[data.game.turns[data.game.turns.length - 1].player].currentIndex);
+                    break;
+                    default:
+                        break;
+                }
+
             }
         })
     }
