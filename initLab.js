@@ -25,19 +25,21 @@ function initButtons(x,y) {
         if (j % 2 == 1) {
             data.buttonShapes.push({
                 points: [{
-                    x: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    y: 0 + config.margin/2
+                    x: j,
+                    y: -1
                 }],
                 direction: config.shiftDirection.DOWN,
-                cat: config.interactiveType.BUTTON
+                cat: config.interactiveType.BUTTON,
+                enabled: true
             });
             data.buttonShapes.push({
                 points: [{
-                    x: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    y: (y) * config.cardSize + config.margin + config.margin/2
+                    x: j,
+                    y: -1
                 }],
                 direction: config.shiftDirection.UP,
-                cat: config.interactiveType.BUTTON
+                cat: config.interactiveType.BUTTON,
+                enabled: true
             });
         }
     }
@@ -45,19 +47,21 @@ function initButtons(x,y) {
         if (j % 2 == 1) {
             data.buttonShapes.push({
                 points: [{
-                    y: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
+                    y: j,
                     x: 0 + config.margin/2
                 }],
                 direction: config.shiftDirection.RIGHT,
-                cat: config.interactiveType.BUTTON
+                cat: config.interactiveType.BUTTON,
+                enabled: true
             });
             data.buttonShapes.push({
                 points: [{
-                    y: j * config.cardSize + config.margin + Math.floor(config.cardSize/2),
-                    x: (x) * config.cardSize + config.margin/2 + config.margin
+                    y: j,
+                    x: -1
                 }],
                 direction: config.shiftDirection.LEFT,
-                cat: config.interactiveType.BUTTON
+                cat: config.interactiveType.BUTTON,
+                enabled: true
             });
         }
     }
@@ -109,7 +113,6 @@ export function initPlayers(amountPlayers, x, y) {
     let amountNumbers = Math.floor((x*y)/3);
     console.log("amountNumbers",amountNumbers);
     let usedNumbers = new Array(amountNumbers);
-    data.currentPlayer = 0;
     for (let i = 0; i < amountPlayers; i++) {
         let indexX = (i % 2) * (x-1);
         let indexY = ((Math.floor(i/2)) % 2) * (y-1);

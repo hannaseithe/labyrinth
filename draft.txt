@@ -132,4 +132,19 @@ Card1 unterhalb von Card2:
         - Abhaken bei MouseUp
 
     >- Implementierung von Turns
+        - datenbank für game
+            - turns -> turn: player
+                -initialize turn: 
+                    - log lastPlayerPosition
+                    - set new Turn -> set Player
+                    >- disable return button of last cardshift 
+                - after card Shift: 
+                    - disable all buttons
+                    - log card Shift
+                - after succesful move of Player -> initialize next turn
+                    
+        - button to "force next turn"
+        => log  B) which line shift, C) move to Player
+            
+        - win when all solved and returned to home
 

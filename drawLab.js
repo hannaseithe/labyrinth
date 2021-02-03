@@ -1,3 +1,5 @@
+import { getButtonPixels, getPlayerPixels } from './lab.js';
+
 var config, data, ctx;
 
 function markExtraCard() {
@@ -125,7 +127,6 @@ function drawXCard() {
 }
 
 function drawPlayer(x, y) {
-    console.log(x, y);
     ctx.save();
     ctx.translate(x, y);
     ctx.fillStyle = 'rgba(200,0,0,0.9)';
@@ -139,20 +140,25 @@ function drawPlayers() {
 
     for (let i = 0; i < data.players.length; i++) {
         if (!data.players[i].isDragging) {
-            drawPlayer(data.players[i].currentIndex[0] * config.cardSize + (Math.floor(config.cardSize / 2)) + config.margin,
-                data.players[i].currentIndex[1] * config.cardSize + (Math.floor(config.cardSize / 2)) + config.margin)
+            let point = getPlayerPixels(data.players[i]);
+            drawPlayer(point[0], point[1])
         } else {
             drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1])
         }
 
     }
 }
-function drawButton(x, y, direction) {
+function drawButton(x, y, direction, enabled) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate((direction + 1) * Math.PI / 2);
-    ctx.fillStyle = 'rgba(200,0,0,0.9)';
-    ctx.strokeStyle = 'rgba(200,0,0,0.9)';
+    if (enabled) {
+        ctx.fillStyle = 'rgba(200,0,0,0.9)';
+        ctx.strokeStyle = 'rgba(200,0,0,0.9)';
+    } else {
+        ctx.fillStyle = 'rgba(200,0,0,0.2)';
+        ctx.strokeStyle = 'rgba(200,0,0,0.2)';
+    }
     ctx.beginPath();
     ctx.arc(0, 0, config.buttonRadius, 0, 2 * Math.PI);
     ctx.stroke();
@@ -163,13 +169,16 @@ function drawButton(x, y, direction) {
 function drawButtons() {
 
     data.buttonShapes.forEach((button, index) => {
-        drawButton(button.points[0].x, button.points[0].y, button.direction)
+        let point = getButtonPixels(button);
+        drawButton(point[0], point[1], button.direction, button.enabled);
+
+
     })
 
 }
 
 function drawDisplay() {
-    let cp = data.players[data.currentPlayer];
+    let cp = data.players[data.game.turns[data.game.turns.length - 1].player];
     ctx.save();
     ctx.translate(config.extraCardPosition.x + config.margin,
         config.extraCardPosition.y + config.cardSize * 1.5 + config.margin);
