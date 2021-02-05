@@ -136,6 +136,7 @@ function shiftCards(index, direction) {
 
 function initGame() {
     data.game.turns = [{ player: 0 }];
+    data.game.finished = false;
     drawLab(config, data, ctx);
 }
 
@@ -165,11 +166,19 @@ function getButtonfromShift(shift) {
     })
 }
 
+function getReturnShift(shift) {
+    return {
+        direction: (shift.direction + 2) % 4,
+        index: shift.index
+    }
+}
+
 function disableLastShiftButton() {
     let turns = data.game.turns;
     let lastShift = turns[turns.length - 1].shift;
     if (lastShift) {
-        let button = getButtonfromShift(lastShift);
+        let returnShift = getReturnShift(lastShift);
+        let button = getButtonfromShift(returnShift);
         button.enabled = false;
     }
 
@@ -183,6 +192,20 @@ function disableAllButtons() {
     data.buttonShapes.forEach((button) => button.enabled = false)
 }
 
+function getRectangleButton(type) {
+    return data.rectangleButtons.find((button) => button.cat == type)
+}
+
+function disableEndTurnButton() {
+    let endTurnButton = getRectangleButton(config.interactiveType.ENDTURNBUTTON);
+    endTurnButton.enabled = false;
+}
+
+function enableEndTurnButton() {
+    let endTurnButton = getRectangleButton(config.interactiveType.ENDTURNBUTTON);
+    endTurnButton.enabled = true;
+}
+
 function endTurn(card) {
     logPlayerPosition(card);
     let turns = data.game.turns;
@@ -190,6 +213,10 @@ function endTurn(card) {
     enableAllButtons();
     disableLastShiftButton();
     turns.push({ player: (playerIndex + 1) % data.players.length });
+}
+
+function endGame() {
+    data.game.finished = true;
 }
 
 
@@ -293,7 +320,7 @@ function handleMouseDown(x, y) {
             switch (shape.cat) {
                 case config.interactiveType.PLAYER:
                     let turns = data.game.turns;
-                    if (turns[turns.length - 1].player == index) {
+                    if ((turns[turns.length - 1].player == index) && (turns[turns.length - 1].shift)) {
                         data.isDragging = true;
                         shape.isDragging = true;
                     }
@@ -338,14 +365,17 @@ function handleMouseDown(x, y) {
         data.rectangleButtons.forEach((shape) => {
             defineShape(shape);
             if (ctx.isPointInPath(x, y)) {
-
-                switch (shape.cat) {
-                    case config.interactiveType.ENDTURNBUTTON:
-                        endTurn(data.players[data.game.turns[data.game.turns.length - 1].player].currentIndex);
-                    break;
-                    default:
-                        break;
+                if (data.game.turns[data.game.turns.length - 1].shift) {
+                    switch (shape.cat) {
+                        case config.interactiveType.ENDTURNBUTTON:
+                            endTurn(data.players[data.game.turns[data.game.turns.length - 1].player].currentIndex);
+                            break;
+                        default:
+                            break;
+                    }
                 }
+
+
 
             }
         })
@@ -411,15 +441,21 @@ function handleMouseUp(x, y) {
                         if (noPlayerOnCard(card)) {
                             if (findPath(shape.currentIndex, card, data.lab)) {
                                 shape.currentIndex = card;
-                                endTurn(card);
+                                
                                 // test if number on card
                                 let numberOnCard = data.lab[card[1]][card[0]].number;
                                 if (numberOnCard) {
-                                    let nextCardIndex = getNextNumberIndex(shape.listNumbers)
-                                    if (nextCardIndex > -1 && numberOnCard == shape.listNumbers[nextCardIndex].number) {
-                                        shape.listNumbers[nextCardIndex].solved = true;
+                                    let nextCardIndex = getNextNumberIndex(shape.listNumbers);
+                                    if (nextCardIndex + 1 == shape.listNumbers.length) {
+                                        endGame();
+                                    } else {
+                                        if (numberOnCard == shape.listNumbers[nextCardIndex].number) {
+                                            shape.listNumbers[nextCardIndex].solved = true;
+                                        }
                                     }
+                                    
                                 }
+                                endTurn(card);
                             }
                         }
                     }
@@ -454,7 +490,7 @@ canvas.addEventListener('mouseup', e => {
 
 
 window.onload = () => {
-    initLab(5, 5, config, data, canvas);
-    initPlayers(2, 5, 5);
+    initLab(9, 9, config, data, canvas);
+    initPlayers(4, data.lab[0].length, data.lab.length);
     initGame();
 }

@@ -126,14 +126,40 @@ function drawXCard() {
     drawCard(config.extraCardPosition.x + Math.floor(config.cardSize / 2) + config.margin, config.extraCardPosition.y + Math.floor(config.cardSize / 2) + config.margin, data.extraCard);
 }
 
-function drawPlayer(x, y) {
+function drawPlayer(x, y, number) {
     ctx.save();
     ctx.translate(x, y);
-    ctx.fillStyle = 'rgba(200,0,0,0.9)';
-    ctx.beginPath();
-    ctx.arc(0, 0, config.playerRadius, 0, 2 * Math.PI);
-    ctx.fill()
-    ctx.restore();
+    let turns = data.game.turns;
+    if (!(turns[turns.length - 1].player == number)) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.arc(0, 0, config.playerRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.font = "16px arial";
+        ctx.strokeText(number, -5, 5);
+        ctx.restore();
+    } else {
+        if (turns[turns.length - 1].shift) {
+            ctx.fillStyle = 'rgba(200,0,0,0.9)'
+            ctx.strokeStyle = 'rgba(250,250,250,0.9)';
+        } else {
+            ctx.fillStyle = 'rgba(150,0,0,0.5)';
+            ctx.strokeStyle = 'rgba(250,250,250,0.9)';
+        }
+        ctx.beginPath();
+        ctx.lineWidth = 3;
+        ctx.arc(0, 0, config.playerRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(250,250,250,0.9)';
+        ctx.font = "16px arial";
+        ctx.fillText(number, -5, 5);
+        ctx.restore();
+    }
+
+
 }
 
 function drawPlayers() {
@@ -141,9 +167,9 @@ function drawPlayers() {
     for (let i = 0; i < data.players.length; i++) {
         if (!data.players[i].isDragging) {
             let point = getPlayerPixels(data.players[i]);
-            drawPlayer(point[0], point[1])
+            drawPlayer(point[0], point[1], i)
         } else {
-            drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1])
+            drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1], i)
         }
 
     }
@@ -171,11 +197,15 @@ function drawButtons() {
         let point = getButtonPixels(button);
         drawButton(point[0], point[1], button.direction, button.enabled);
     })
-    data.rectangleButtons.forEach((button)=> {
+    data.rectangleButtons.forEach((button) => {
         ctx.save();
-        ctx.translate(button.points[0].x,button.points[0].y);
+        ctx.translate(button.points[0].x, button.points[0].y);
+        if (!data.game.turns[data.game.turns.length - 1].shift) {
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        }
         ctx.strokeRect(0, 0, button.width, button.height);
-        ctx.fillText(button.label, 2,Math.floor(button.height * 2/3));
+        ctx.fillText(button.label, 2, Math.floor(button.height * 2 / 3));
         ctx.restore();
     })
 }
@@ -200,18 +230,32 @@ function drawDisplay() {
     ctx.restore();
 }
 
+function drawWinnerScreen() {
+    let turns = data.game.turns;
+    ctx.save();
+    ctx.moveTo(config.margin,config.margin);
+    ctx.fillText("Player " + turns[turns.length - 1].player + ", Congratulations you have won, after " + (turns.length - 1) + " turns.",
+    0,config.cardSize)
+    ctx.restore();
+}
+
 export function drawLab(con, dat, c) {
     config = con;
     data = dat;
     ctx = c;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    data.lab.forEach((line, line_index) => {
-        line.forEach((card, row_index) => {
-            drawCardinLab(row_index, line_index, card)
+    if (!data.game.finished) {
+        data.lab.forEach((line, line_index) => {
+            line.forEach((card, row_index) => {
+                drawCardinLab(row_index, line_index, card)
+            })
         })
-    })
-    drawXCard();
-    drawPlayers();
-    drawButtons();
-    drawDisplay();
+        drawXCard();
+        drawPlayers();
+        drawButtons();
+        drawDisplay();
+    } else {
+        drawWinnerScreen()
+    }
+    
 }

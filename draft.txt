@@ -137,7 +137,7 @@ Card1 unterhalb von Card2:
                 -initialize turn: 
                     - log lastPlayerPosition
                     - set new Turn -> set Player
-                    >- disable return button of last cardshift 
+                    - disable return button of last cardshift 
                 - after card Shift: 
                     - disable all buttons
                     - log card Shift
@@ -145,6 +145,13 @@ Card1 unterhalb von Card2:
                     
         - button to "force next turn"
         => log  B) which line shift, C) move to Player
-            
-        - win when all solved and returned to home
+
+        - disable return Button (not the same!)
+        - card has to be moved
+        - fix display margin issues
+        - mark player whose turn it is
+        - fix corner cards
+
+        - win when all solved
+        - make Typescript
 
