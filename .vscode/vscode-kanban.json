@@ -1,0 +1,108 @@
+{
+  "todo": [
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T14:57:10.940Z",
+      "id": "2",
+      "references": [],
+      "title": "Build network",
+      "details": {
+        "content": "- combine 2d convolutional layer with other State Tensor",
+        "mime": "text/markdown"
+      }
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T14:57:43.004Z",
+      "id": "3",
+      "references": [],
+      "title": "Loss Function",
+      "details": {
+        "content": "Da habe ich noch ganz wenig Ahnung was zu tun ist",
+        "mime": "text/markdown"
+      }
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T14:59:40.911Z",
+      "id": "5",
+      "references": [],
+      "title": "Make human and agent interplay possible"
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T14:54:10.078Z",
+      "id": "1",
+      "references": [],
+      "title": "Negative Rewards?",
+      "details": {
+        "content": "- negative Rewards if the other wins or finds number\n- negative Rewards for out of path move -> end Game?\n- negative Rewards for not allowed card shift -> end Game?",
+        "mime": "text/markdown"
+      }
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T15:50:27.325Z",
+      "id": "9",
+      "references": [],
+      "title": "Tensorboard /Summary Writer"
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T15:16:01.082Z",
+      "details": {
+        "content": "Use argparse for node.js",
+        "mime": "text/markdown"
+      },
+      "id": "6",
+      "references": [],
+      "title": "Train from command line"
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T15:22:53.363Z",
+      "id": "7",
+      "references": [],
+      "title": "When to save trained network"
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-14T15:23:07.737Z",
+      "details": {
+        "content": "cumulativeRewardThreshold?\nMax Number of Turns?",
+        "mime": "text/markdown"
+      },
+      "id": "8",
+      "references": [],
+      "title": "When to stop training?"
+    },
+    {
+      "assignedTo": {
+        "name": "Hanna Seithe"
+      },
+      "creation_time": "2021-07-18T10:53:31.310Z",
+      "id": "10",
+      "references": [],
+      "title": "How to deal with state change and reward from other agents?"
+    }
+  ],
+  "in-progress": [],
+  "testing": [],
+  "done": []
+}
