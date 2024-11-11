@@ -2,10 +2,13 @@ import { getStateTensors, getRandomActions, REWARDS} from './lab.js';
 import { ReplayMemory } from './replayMemory.js';
 
 class LabGameAgent {
-    constructor(game, config, model) {
+    constructor(game, config, online, target) {
 
         this.game = game;
-        this.onlineNetwork = model;
+        this.onlineNetwork = online;
+        this.targetNetwork = target;
+
+
         this.replayMemory = new ReplayMemory(config.replayBufferSize);
         this.cumulativeReward = 0;
 
@@ -71,7 +74,7 @@ class LabGameAgent {
                 .mul(actionTensor).sum(-1);
 
             const rewardTensor = tf.tensor1d(batch.map(example => example[2]));
-            const nextStateTensor = getStateTensor(
+            const nextStateTensor = getStateTensors(
                 batch.map(example => example[4]), this.game.height, this.game.width);
             const nextMaxQTensor =
                 this.targetNetwork.predict(nextStateTensor).max(-1);
@@ -121,11 +124,13 @@ export class LabGameSuperAgent {
             //TODO import "createDeepQNetwork"
         this.onlineNetwork =
             createDeepQNetwork(game.height, game.width);
-        //TODO create targetNetwork and hand it over to LabGameAgents(not entirely sure we really need it though)
-
+        this.targetNetwork =
+            createDeepQNetwork(game.height,  game.width, NUM_ACTIONS);
+        this.targetNetwork.trainable = false;
+        this.number = number;
         this.agents = [];
         for (i = 0; i < number; i++) {
-            this.agents[i] = new LabGameAgent(game, config, this.s)
+            this.agents[i] = new LabGameAgent(game, config, this.onlineNetwork, this.targetNetwork)
         }
 
     }
@@ -136,30 +141,28 @@ export class LabGameSuperAgent {
         let turnResults = [];
         let step = 0;
         //TODO doneTurn bleibt immer TRUE!!! Ordentliche Loop
-        while (!doneTurn) {
-            step++;
-            let { state, cumulativeReward, negativeReward, done} = this.agents[step].playStep();
+
+        for (let i = 0; i < this.number; i++) {
+            let { state, cumulativeReward, negativeReward, done} = this.agents[i].playStep();
             if (!done) {
                 turnResults.append({ state, cumulativeReward, done });
-                this.agents[step - 1].addNegativeReward(negativeReward);
-                this.agents[step - 2].addNegativeReward(negativeReward);
-                this.agents[step - 3].addNegativeReward(negativeReward);
-                this.agents[step - 3].addFinalState(state);
+                for (let j = 1 ; j < this.number; j++) {
+                    this.agents[(i + j) % this.number].addNegativeReward(negativeReward);
+                }
+                this.agents[i].addFinalState(state);
             } else {
-                doneTurn = true;
-                this.agents[step - 1].addNegativeReward(negativeReward);
-                this.agents[step - 2].addNegativeReward(negativeReward);
-                this.agents[step - 3].addNegativeReward(negativeReward);
-                this.agents[step - 1].addFinalState(state);
-                this.agents[step - 2].addFinalState(state);
-                this.agents[step - 3].addFinalState(state);
-                this.agents[step - 1].setDone();
-                this.agents[step - 2].setDone();
-                this.agents[step - 3].setDone();
-
+                for (let j = 1 ; j < this.number-1; j++) {
+                    this.agents[(i + j) % this.number].addNegativeReward(negativeReward);
+                    this.agents[(i + j) % this.number].addFinalState(state);
+                    this.agents[(i+j) % this.number].setDone();
+                }
+                
+                this.agents[i].addFinalState(state);
+                this.agents[i].setDone();
+                break;
             }
         }
-        //TODO punish other agents on success (doneTurn as well as numberFound)?
+
 
         this.cumulativeRewards_ = turnResults.map((result) => result.cumulativeReward);
 
@@ -168,10 +171,10 @@ export class LabGameSuperAgent {
         const output = {
             actions: this.actions_,
             cumulativeReward: this.cumulativeRewards_,
-            done: doneTurn,
+            done: done,
             stepsPlayed: step
         };
-        if (doneTurn) {
+        if (done) {
             this.reset();
         }
         return output;

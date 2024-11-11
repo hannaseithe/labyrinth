@@ -432,6 +432,13 @@ export class LabGame {
         return relevantState;
     }
 
+    reset() {
+        this.initializeSnake_();
+        this.fruitSquares_ = null;
+        this.makeFruits_();
+        return this.getState();
+      }
+
     rotateExtraCard_() {
         this.data_.extraCard.orientation++;
         drawLab(this.config_, this.data_, this.ctx_);
