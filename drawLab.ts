@@ -160,11 +160,11 @@ function drawPlayer(x, y, number) {
 
 }
 
-function drawPlayers(pixFn) {
+function drawPlayers(game) {
 
     for (let i = 0; i < data.players.length; i++) {
         if (!data.players[i].isDragging) {
-            let point = pixFn(data.players[i]);
+            let point = game.getPlayerPixels_(data.players[i]);
             drawPlayer(point[0], point[1], i)
         } else {
             drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1], i)
@@ -190,9 +190,9 @@ function drawButton(x, y, direction, enabled) {
     ctx.restore();
 }
 
-function drawButtons(pixFn) {
+function drawButtons(game) {
     data.buttonShapes.forEach((button, index) => {
-        let point = pixFn(button);
+        let point = game.getButtonPixels_(button);
         drawButton(point[0], point[1], button.direction, button.enabled);
     })
     data.rectangleButtons.forEach((button) => {
@@ -237,7 +237,7 @@ function drawWinnerScreen() {
     ctx.restore();
 }
 
-function drawLab(game) {
+export function drawLab(game) {
     config = game.config;
     data = game.data_;
     ctx = game.ctx_;
@@ -250,13 +250,11 @@ function drawLab(game) {
             })
         })
         drawXCard();
-        drawPlayers(game.getPlayerPixels_);
-        drawButtons(game.getButtonPixels_);
+        drawPlayers(game);
+        drawButtons(game);
         drawDisplay();
     } else {
         drawWinnerScreen()
     }
     
 }
-
-module.exports = { drawLab}

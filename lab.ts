@@ -8,12 +8,11 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
-const tf_l = require('@tensorflow/tfjs-node')
-//import * as tf from '@tensorflow/tfjs'
-const findPath_l = require('./findPath.js').findPath;
-const drawLab_l = require('./drawLab.js').drawLab;
-const getRandomInteger_l = require('./utils.js').getRandomInteger;
-//import * as tf from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs'
+import { findPath } from './findPath.js';
+import { drawLab } from './drawLab.js';
+import { getRandomInteger } from './utils.js';
+
 
 const NUM_ACTIONS_XCARD = 4;
 const NUM_ACTIONS_SHIFTCARD = 16;
@@ -21,18 +20,18 @@ const NUM_ACTIONS_MOVE = 81;
 
 const NUM_ACTIONS = NUM_ACTIONS_XCARD + NUM_ACTIONS_SHIFTCARD + NUM_ACTIONS_MOVE;
 
-const REWARDS = {
+export const REWARDS = {
     WIN: 100,
     NUMBER_FOUND: 20,
     MOVED: 1,
-    PLAYER_ON_CARD: -0.1,
-    PATH_NOT_FOUND: -0.05,
+    PLAYER_ON_CARD: -0.05,
+    PATH_NOT_FOUND: -0.01,
     OTHER_FOUND_NUMBER: -2,
     LOST: -10
 }
 
 
-class LabGame {
+export class LabGame {
     draw;
 
     config;
@@ -92,7 +91,11 @@ class LabGame {
 
         this.initLab_(this.config.width, this.config.height);
         this.initPlayers_(this.config.humanPlayers, this.config.machinePlayers);
+
         this.initGame_();
+        if (this.draw) {
+            this.initGraphics_(this.config.width, this.config.height)
+        }
 
 
     }
@@ -109,6 +112,25 @@ class LabGame {
             this.initExtraCard_(x, y);
             this.initButtons_(x, y);
             this.initEndTurnButton_();
+            drawLab(this);
+
+            this.canvas_.addEventListener('mousedown', e => {
+                var x = e.offsetX;
+                var y = e.offsetY;
+                this.handleMouseDown_(x, y);
+            });
+            this.canvas_.addEventListener('mousemove', e => {
+                var x = e.offsetX;
+                var y = e.offsetY;
+                this.handleMouseMove_(x, y);
+            })
+            this.canvas_.addEventListener('mouseup', e => {
+                var x = e.offsetX;
+                var y = e.offsetY;
+                this.handleMouseUp_(x, y);
+
+
+            })
         }
     }
 
@@ -303,27 +325,7 @@ class LabGame {
     initGame_() {
         this.data_.game.turns = [{ player: 0 }];
         this.data_.game.finished = false;
-        if (this.draw) {
-            let this_ = this;
-            window.onload = () => {
-                drawLab(this);
-                this.canvas_.addEventListener('mousedown', e => {
-                    var x = e.offsetX;
-                    var y = e.offsetY;
-                    this_.handleMouseDown_(x, y);
-                });
-                this.canvas_.addEventListener('mousemove', e => {
-                    var x = e.offsetX;
-                    var y = e.offsetY;
-                    this_.handleMouseMove_(x, y);
-                })
-                this.canvas_.addEventListener('mouseup', e => {
-                    var x = e.offsetX;
-                    var y = e.offsetY;
-                    this_.handleMouseUp_(x, y);
-                })
-            }
-        }
+
     }
 
     _rotateExtraCard_(action) {
@@ -392,11 +394,11 @@ class LabGame {
         let reward = 0;
         let done = false;
 
-        let card = [x,y]
+        let card = [x, y]
         let currentPlayer = this.data_.players[this.data_.game.turns[this.data_.game.turns.length - 1].player];
         if (card) {
             if (this.noPlayerOnCard_(card)) {
-                if (findPath_l(currentPlayer.currentIndex, card, this.data_.lab)) {
+                if (findPath(currentPlayer.currentIndex, card, this.data_.lab)) {
                     //reward += REWARDS.MOVED
                     currentPlayer.currentIndex = card;
 
@@ -411,7 +413,7 @@ class LabGame {
                                 reward += REWARDS.WIN;
                                 done = true
                             }
-                            
+
                         } else {
                             if (numberOnCard == currentPlayer.listNumbers[nextCardIndex].number) {
                                 currentPlayer.listNumbers[nextCardIndex].solved = true;
@@ -811,7 +813,7 @@ class LabGame {
                         let card = this.getCardFromMousePosition_(x, y);
                         if (card) {
                             if (this.noPlayerOnCard_(card)) {
-                                if (findPath_l(shape.currentIndex, card, this.data_.lab)) {
+                                if (findPath(shape.currentIndex, card, this.data_.lab)) {
                                     shape.currentIndex = card;
 
                                     // test if number on card
@@ -846,14 +848,14 @@ class LabGame {
 
 }
 
-function getRandomActions() {
-    let action1 = getRandomInteger_l(0, NUM_ACTIONS_XCARD);
-    let action2 = getRandomInteger_l(0, NUM_ACTIONS_SHIFTCARD);
-    let action3 = getRandomInteger_l(0, NUM_ACTIONS_MOVE);
+export function getRandomActions() {
+    let action1 = getRandomInteger(0, NUM_ACTIONS_XCARD);
+    let action2 = getRandomInteger(0, NUM_ACTIONS_SHIFTCARD);
+    let action3 = getRandomInteger(0, NUM_ACTIONS_MOVE);
     return [action1, action2, action3];
 }
 
-function getStateTensors(state, config) {
+export function getStateTensors(state, config) {
 
     /*     let relevantState = {
             lab: this.data_.lab,
@@ -868,53 +870,52 @@ function getStateTensors(state, config) {
 
     if (!Array.isArray(state)) {
         state = [state];
-      }
+    }
     const numExamples = state.length;
 
-    const columns =  config.width;
+    const columns = config.width;
     const rows = config.height;
-    const firstBuffer = tf_l.buffer([numExamples, rows, columns, 5]);
-    const secondBuffer = tf_l.buffer([numExamples, config.otherStateLength]);
-    
+    const firstBuffer = tf.buffer([numExamples, rows, columns, 5]);
+    const secondBuffer = tf.buffer([numExamples, config.otherStateLength]);
+
     for (let n = 0; n < numExamples; ++n) {
-    
+
         let currentPlayer = state[n].currentPlayer
         let cpPosition = state[n].players[currentPlayer].currentIndex
 
-    state[n].lab.forEach((column, cIndex) => {
-        column.forEach((card, rIndex) => {
-            firstBuffer.set(card.shape, n, cIndex, rIndex, 0)
-            firstBuffer.set(card.orientation, n, cIndex, rIndex, 1)
-            firstBuffer.set(card.number, n, cIndex, rIndex, 2)
-            firstBuffer.set(-1, n, cIndex, rIndex, 3)
-            firstBuffer.set(-1, n, cIndex, rIndex, 4)
+        state[n].lab.forEach((column, cIndex) => {
+            column.forEach((card, rIndex) => {
+                firstBuffer.set(card.shape, n, cIndex, rIndex, 0)
+                firstBuffer.set(card.orientation, n, cIndex, rIndex, 1)
+                firstBuffer.set(card.number, n, cIndex, rIndex, 2)
+                firstBuffer.set(-1, n, cIndex, rIndex, 3)
+                firstBuffer.set(-1, n, cIndex, rIndex, 4)
+            })
         })
-    })
 
-    firstBuffer.set(currentPlayer,n, cpPosition[0],cpPosition[1],3)
-    state[n].players.forEach((player, index) => {
-        if (currentPlayer != index) {
-            firstBuffer.set(index,n, player.currentIndex[0],player.currentIndex[1],4)
-        }
-    })
+        firstBuffer.set(currentPlayer, n, cpPosition[0], cpPosition[1], 3)
+        state[n].players.forEach((player, index) => {
+            if (currentPlayer != index) {
+                firstBuffer.set(index, n, player.currentIndex[0], player.currentIndex[1], 4)
+            }
+        })
 
-    let otherStateIndex = 0
+        let otherStateIndex = 0
 
-    state[n].players[currentPlayer].listNumbers.forEach((item) => {
-        secondBuffer.set(item.number, n, otherStateIndex);
-        secondBuffer.set(item.solved ? 1 : 0, n, otherStateIndex + 1);
-        otherStateIndex += 2
-    })
-    secondBuffer.set(state[n].extraCard.shape, n, otherStateIndex);
-    secondBuffer.set(state[n].extraCard.orientation, n, otherStateIndex +1);
-    secondBuffer.set(state[n].extraCard.number, n, otherStateIndex + 1);
-    secondBuffer.set(((state[n].lastShift.index + 1) / 4) * (state[n].lastShift.direction + 1), n, otherStateIndex + 1);
+        state[n].players[currentPlayer].listNumbers.forEach((item) => {
+            secondBuffer.set(item.number, n, otherStateIndex);
+            secondBuffer.set(item.solved ? 1 : 0, n, otherStateIndex + 1);
+            otherStateIndex += 2
+        })
+        secondBuffer.set(state[n].extraCard.shape, n, otherStateIndex);
+        secondBuffer.set(state[n].extraCard.orientation, n, otherStateIndex + 1);
+        secondBuffer.set(state[n].extraCard.number, n, otherStateIndex + 1);
+        secondBuffer.set(((state[n].lastShift.index + 1) / 4) * (state[n].lastShift.direction + 1), n, otherStateIndex + 1);
 
 
     }
 
-    
+
     return [firstBuffer.toTensor(), secondBuffer.toTensor()]
 
 }
-module.exports = { LabGame, REWARDS, getStateTensors, getRandomActions }

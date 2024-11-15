@@ -11,13 +11,13 @@
 //player: currentIndex: [indexX, indexY],listNumbers: listNumbers
 //extraCard: shape,orientation,number
 //currentPlayer
-const tf = require('@tensorflow/tfjs-node')
-//import * as tf from '@tensorflow/tfjs'
-const LabGameSuperAgent_t = require("./agent.js").LabGameSuperAgent;
-const LabGame_t = require("./lab.js").LabGame;
-const fs = require('fs');
-const path = require('path');
-const argparse = require('argparse');
+
+import * as tf from '@tensorflow/tfjs-node'
+import * as fs from 'fs';
+import * as path from 'path';
+import * as argparse from 'argparse';
+import { LabGameSuperAgent } from './agent.js';
+import { LabGame } from './lab.js';
 
 
 async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewardThreshold,
@@ -205,7 +205,7 @@ function parseArguments() {
 
     console.log(`args: ${JSON.stringify(args, null, 2)}`);
   
-    let game = new LabGame_t(0, 4, args.height, args.width, false);
+    let game = new LabGame(0, 4, args.height, args.width, false);
 
     let agentConfig = {
         replayBufferSize: args.replayBufferSize,
@@ -215,7 +215,7 @@ function parseArguments() {
         learningRate: args.learningRate
     }
 
-    let superAgent = new LabGameSuperAgent_t(4, game, agentConfig);
+    let superAgent = new LabGameSuperAgent(4, game, agentConfig);
   
     await train(
         superAgent, args.batchSize, args.gamma, args.learningRate,
@@ -225,4 +225,3 @@ function parseArguments() {
   
 
     main();
- module.exports = {}

@@ -1,16 +1,13 @@
-const tf_a = require('@tensorflow/tfjs-node')
+import * as tf from '@tensorflow/tfjs-node'
 //import * as tf from '@tensorflow/tfjs'
-const getStateTensors_a = require('./lab.js').getStateTensors;
-const getRandomActions_a = require('./lab.js').getRandomActions;
-const REWARDS_a = require('./lab.js').REWARDS;
-const LabGame_a = require('./lab.js').LabGame;
-const createDeepQNetwork_a = require('./dqn.js').createDeepQNetwork;
-const assertPositiveInteger_a = require('./utils.js').assertPositiveInteger;
-const ReplayMemory_a = require('./replayMemory.js').ReplayMemory;
-//import * as tf from '@tensorflow/tfjs'
+import {getStateTensors, getRandomActions, REWARDS} from './lab.js'
+import { createDeepQNetwork } from './dqn.js';
+import { assertPositiveInteger } from './utils.js';
+import { ReplayMemory } from './replayMemory.js'
 
 
-class LabGameAgent {
+
+export class LabGameAgent {
     game;
     epsilon;
     epsilonInit;
@@ -25,7 +22,7 @@ class LabGameAgent {
     cumulativeReward;
     constructor(game, config, online, target) {
 
-        assertPositiveInteger_a(config.epsilonDecayFrames, 'Epsilon Decay Frames');
+        assertPositiveInteger(config.epsilonDecayFrames, 'Epsilon Decay Frames');
 
         this.game = game;
     
@@ -37,7 +34,7 @@ class LabGameAgent {
     
 
     
-        this.optimizer = tf_a.train.adam(config.learningRate);
+        this.optimizer = tf.train.adam(config.learningRate);
     
         this.frameCount = 0;
 
@@ -46,7 +43,7 @@ class LabGameAgent {
         this.targetNetwork = target;
 
 
-        this.replayMemory = new ReplayMemory_a(config.replayBufferSize);
+        this.replayMemory = new ReplayMemory(config.replayBufferSize);
         this.cumulativeReward = 0;
 
         this.reset();
@@ -65,12 +62,12 @@ class LabGameAgent {
         const state = this.game.getState();
         if (Math.random() < this.epsilon) {
             // Pick an action at random.
-            [action1, action2, action3 ] = getRandomActions_a();
+            [action1, action2, action3 ] = getRandomActions();
         } else {
             // Greedily pick an action based on online DQN output.
-            tf_a.tidy(() => {
+            tf.tidy(() => {
                 const [labTensor,otherTensor] =
-                    getStateTensors_a(state,this.game.config);
+                    getStateTensors(state,this.game.config);
                 const predictionTensor = this.onlineNetwork.predict([labTensor,otherTensor]).reshape([-1]);
                 action1 = predictionTensor.slice(0, 4).argMax(-1).dataSync()[0]
                 action2 = predictionTensor.slice(4, 16).argMax(-1).dataSync()[0]
@@ -85,11 +82,11 @@ class LabGameAgent {
         this.cumulativeReward += reward;
 
         switch (reward) {
-            case REWARDS_a.WIN: 
-                negativeReward = REWARDS_a.LOST;
+            case REWARDS.WIN: 
+                negativeReward = REWARDS.LOST;
                 break;
-            case REWARDS_a.NUMBER_FOUND:
-                negativeReward = REWARDS_a.OTHER_FOUND_NUMBER;
+            case REWARDS.NUMBER_FOUND:
+                negativeReward = REWARDS.OTHER_FOUND_NUMBER;
                 break;
         }
 
@@ -106,35 +103,35 @@ class LabGameAgent {
     trainOnReplayBatch(batchSize, gamma, optimizer) {
         // Get a batch of examples from the replay buffer.
         const batch = this.replayMemory.sample(batchSize);
-        const lossFunction = () => tf_a.tidy(() => {
-            const stateTensors = getStateTensors_a(
+        const lossFunction = () => tf.tidy(() => {
+            const stateTensors = getStateTensors(
                 batch.map(example => example[0]), this.game.config);
 
-            const actionBatch = batch.map(example => tf_a.oneHot(example[1][0],4)
-            .concat(tf_a.oneHot(example[1][1],16))
-            .concat(tf_a.oneHot(example[1][2],81)).arraySync())
+            const actionBatch = batch.map(example => tf.oneHot(example[1][0],4)
+            .concat(tf.oneHot(example[1][1],16))
+            .concat(tf.oneHot(example[1][2],81)).arraySync())
                 
-            const actionTensor = tf_a.tensor2d(actionBatch,[16,101]);      
+            const actionTensor = tf.tensor2d(actionBatch,[16,101]);      
             const qs = this.onlineNetwork.apply(stateTensors, { training: true }).mul(actionTensor).sum(-1);
 
-            const rewardTensor = tf_a.tensor1d(batch.map(example => example[2] + example [3]));
-            const nextStateTensor = getStateTensors_a(
+            const rewardTensor = tf.tensor1d(batch.map(example => example[2] + example [3]));
+            const nextStateTensor = getStateTensors(
                 batch.map(example => example[5]), this.game.config);
             const nextMaxQTensor =
                 this.targetNetwork.predict(nextStateTensor).max(-1);
-            const doneMask = tf_a.scalar(1).sub(
-                tf_a.tensor1d(batch.map(example => example[4])).asType('float32'));
+            const doneMask = tf.scalar(1).sub(
+                tf.tensor1d(batch.map(example => example[4])).asType('float32'));
             const targetQs =
                 rewardTensor.add(nextMaxQTensor.mul(doneMask).mul(gamma));
-            return tf_a.losses.meanSquaredError(targetQs, qs).asScalar();
+            return tf.losses.meanSquaredError(targetQs, qs).asScalar();
         });
 
         // Calculate the gradients of the loss function with repsect to the weights
         // of the online DQN.
-        const grads = tf_a.variableGrads(lossFunction);
+        const grads = tf.variableGrads(lossFunction);
         // Use the gradients to update the online DQN's weights.
         optimizer.applyGradients(grads.grads);
-        tf_a.dispose(grads);
+        tf.dispose(grads);
         // TODO(cais): Return the loss value here?
     }
 
@@ -157,7 +154,7 @@ class LabGameAgent {
 
 }
 
-class LabGameSuperAgent {
+export class LabGameSuperAgent {
     onlineNetwork;
     targetNetwork;
     number;
@@ -169,9 +166,9 @@ class LabGameSuperAgent {
     constructor(number, game, config) {
         this.game = game
         this.onlineNetwork =
-            createDeepQNetwork_a(game.config.height, game.config.width, game.config.numActions, game.config.otherStateLength);
+            createDeepQNetwork(game.config.height, game.config.width, game.config.numActions, game.config.otherStateLength);
         this.targetNetwork =
-            createDeepQNetwork_a(game.config.height,  game.config.width, game.config.numActions, game.config.otherStateLength);
+            createDeepQNetwork(game.config.height,  game.config.width, game.config.numActions, game.config.otherStateLength);
         this.targetNetwork.trainable = false;
         this.number = number;
         this.agents = [];
@@ -240,4 +237,3 @@ class LabGameSuperAgent {
     }
 
 }
-module.exports = { LabGameAgent, LabGameSuperAgent}

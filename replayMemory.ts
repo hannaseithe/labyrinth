@@ -1,15 +1,14 @@
-const tf_r = require('@tensorflow/tfjs-node')
-//import * as tf from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs-node'
 //import * as tf from '@tensorflow/tfjs';
 
 /** Replay buffer for DQN training. */
-class ReplayMemory {
-maxLen;
-buffer;
-index;
-length;
-bufferIndices_;
-initialNegativeReward;
+export class ReplayMemory {
+  maxLen;
+  buffer;
+  index;
+  length;
+  bufferIndices_;
+  initialNegativeReward;
   constructor(maxLen) {
     this.maxLen = maxLen;
     this.buffer = [];
@@ -33,7 +32,7 @@ initialNegativeReward;
    */
   append(item) {
     this.buffer[this.index] = item;
-    if(this.index == 0) {
+    if (this.index == 0) {
       this.buffer[this.index][3] = this.initialNegativeReward
     }
     this.length = Math.min(this.length + 1, this.maxLen);
@@ -51,9 +50,9 @@ initialNegativeReward;
   sample(batchSize) {
     if (batchSize > this.maxLen) {
       throw new Error(
-          `batchSize (${batchSize}) exceeds buffer length (${this.maxLen})`);
+        `batchSize (${batchSize}) exceeds buffer length (${this.maxLen})`);
     }
-    tf_r.util.shuffle(this.bufferIndices_);
+    tf.util.shuffle(this.bufferIndices_);
 
     const out = [];
     for (let i = 0; i < batchSize; ++i) {
@@ -64,7 +63,7 @@ initialNegativeReward;
 
   addNegativeReward(reward) {
     if (this.index == 0) {
-      this.initialNegativeReward += reward 
+      this.initialNegativeReward += reward
     } else {
       this.buffer[this.index - 1][3] += reward
     }
@@ -73,14 +72,14 @@ initialNegativeReward;
 
   addFinalState(state) {
     if (this.index > 0) {
-        this.buffer[this.index - 1][6] = state;
+      this.buffer[this.index - 1][6] = state;
     }
-}
-setDone() {
+  }
+  setDone() {
     if (this.index > 0) {
-        this.buffer[this.index - 1][4] = true;
+      this.buffer[this.index - 1][4] = true;
     }
 
+  }
 }
-}
-module.exports = { ReplayMemory}
+
