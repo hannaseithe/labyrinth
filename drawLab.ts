@@ -1,9 +1,8 @@
-import { getButtonPixels, getPlayerPixels } from './lab.js';
+var config, data, ctx, canvas;
 
-var config, data, ctx;
-
+/*
 function markExtraCard() {
-    drawLab(config, data, ctx);
+    drawLab(config, data, ctx, canvas);
     ctx.save();
     ctx.translate(config.extraCardPosition.x, config.extraCardPosition.y);
     ctx.lineWidth = 3;
@@ -13,7 +12,7 @@ function markExtraCard() {
 }
 
 function markMovableVerLine(x, y) {
-    drawLab(config, data, ctx);
+    drawLab(config, data, ctx, canvas);
     ctx.save();
     ctx.translate(x, 0);
     ctx.lineWidth = 3;
@@ -23,7 +22,7 @@ function markMovableVerLine(x, y) {
 }
 
 function markMovableHorLine(x, y) {
-    drawLab(config, data, ctx);
+    drawLab(config, data, ctx, canvas);
     ctx.save();
     ctx.translate(0, y);
     ctx.lineWidth = 3;
@@ -48,7 +47,7 @@ function drawPath(pfad) {
             ctx.restore();
         }
     })
-}
+}*/
 
 
 function drawCard(x, y, card) {
@@ -99,7 +98,6 @@ function drawCard(x, y, card) {
             break;
         //...
         default:
-            console.log('default: ', card.shape);
             break;
     }
     ctx.lineWidth = 1;
@@ -162,11 +160,11 @@ function drawPlayer(x, y, number) {
 
 }
 
-function drawPlayers() {
+function drawPlayers(pixFn) {
 
     for (let i = 0; i < data.players.length; i++) {
         if (!data.players[i].isDragging) {
-            let point = getPlayerPixels(data.players[i]);
+            let point = pixFn(data.players[i]);
             drawPlayer(point[0], point[1], i)
         } else {
             drawPlayer(data.players[i].draggingPosition[0], data.players[i].draggingPosition[1], i)
@@ -192,9 +190,9 @@ function drawButton(x, y, direction, enabled) {
     ctx.restore();
 }
 
-function drawButtons() {
+function drawButtons(pixFn) {
     data.buttonShapes.forEach((button, index) => {
-        let point = getButtonPixels(button);
+        let point = pixFn(button);
         drawButton(point[0], point[1], button.direction, button.enabled);
     })
     data.rectangleButtons.forEach((button) => {
@@ -239,10 +237,11 @@ function drawWinnerScreen() {
     ctx.restore();
 }
 
-export function drawLab(con, dat, c) {
-    config = con;
-    data = dat;
-    ctx = c;
+function drawLab(game) {
+    config = game.config;
+    data = game.data_;
+    ctx = game.ctx_;
+    canvas = game.canvas_;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!data.game.finished) {
         data.lab.forEach((line, line_index) => {
@@ -251,11 +250,13 @@ export function drawLab(con, dat, c) {
             })
         })
         drawXCard();
-        drawPlayers();
-        drawButtons();
+        drawPlayers(game.getPlayerPixels_);
+        drawButtons(game.getButtonPixels_);
         drawDisplay();
     } else {
         drawWinnerScreen()
     }
     
 }
+
+module.exports = { drawLab}

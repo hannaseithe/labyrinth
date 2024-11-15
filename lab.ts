@@ -8,38 +8,55 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
-
-import { findPath } from './findPath.js';
-import { drawLab } from './drawLab.js';
-import { getRandomInteger } from './utils.js';
+const tf_l = require('@tensorflow/tfjs-node')
+//import * as tf from '@tensorflow/tfjs'
+const findPath_l = require('./findPath.js').findPath;
+const drawLab_l = require('./drawLab.js').drawLab;
+const getRandomInteger_l = require('./utils.js').getRandomInteger;
+//import * as tf from '@tensorflow/tfjs'
 
 const NUM_ACTIONS_XCARD = 4;
 const NUM_ACTIONS_SHIFTCARD = 16;
 const NUM_ACTIONS_MOVE = 81;
 
-export const REWARDS = {
-    WIN : 100,
-    NUMBER_FOUND : 10,
-    OTHER_FOUND_NUMBER : -2,
-    LOST : -10
+const NUM_ACTIONS = NUM_ACTIONS_XCARD + NUM_ACTIONS_SHIFTCARD + NUM_ACTIONS_MOVE;
+
+const REWARDS = {
+    WIN: 100,
+    NUMBER_FOUND: 20,
+    MOVED: 1,
+    PLAYER_ON_CARD: -0.1,
+    PATH_NOT_FOUND: -0.05,
+    OTHER_FOUND_NUMBER: -2,
+    LOST: -10
 }
 
 
-export class LabGame {
-    constructor(hPlayers, mPlayers, draw) {
+class LabGame {
+    draw;
+
+    config;
+    data_;
+    canvas_;
+    ctx_;
+    constructor(hPlayers, mPlayers, width, height, draw) {
 
 
 
         this.draw = draw;
 
-        this.config_ = {
+        this.config = {
             cardSize: 50,
             margin: 20,
             playerRadius: 10,
             buttonRadius: 6,
             extraCardPosition: undefined,
-            height: 9,
-            width: 9,
+            height: height,
+            width: width,
+            numActions: 4 + width * height + (Math.floor(width / 2) + Math.floor(height / 2)) * 2,
+            otherStateLength: 2 * Math.floor(Math.floor(width * height / 3) / (hPlayers + mPlayers)) + 4,
+            humanPlayers: hPlayers,
+            machinePlayers: mPlayers,
             cardType: {
                 CORNER: 0,
                 STRAIGHT: 1,
@@ -73,8 +90,8 @@ export class LabGame {
 
 
 
-        this.initLab_(this.data_.width, this.data_.height);
-        this.initPlayers_(hPlayers, mPlayers);
+        this.initLab_(this.config.width, this.config.height);
+        this.initPlayers_(this.config.humanPlayers, this.config.machinePlayers);
         this.initGame_();
 
 
@@ -86,8 +103,8 @@ export class LabGame {
             this.canvas_ = document.getElementById("canvas");
             this.ctx_ = this.canvas_.getContext("2d");
 
-            this.canvas_.width = x * this.config_.cardSize + 2 * this.config_.cardSize + this.config_.margin * 2;
-            this.canvas_.height = y * this.config_.cardSize + this.config_.margin * 2;
+            this.canvas_.width = x * this.config.cardSize + 2 * this.config.cardSize + this.config.margin * 2;
+            this.canvas_.height = y * this.config.cardSize + this.config.margin * 2;
 
             this.initExtraCard_(x, y);
             this.initButtons_(x, y);
@@ -97,35 +114,35 @@ export class LabGame {
 
     initExtraCard_(x, y) {
         if (this.draw) {
-            this.config_.extraCardPosition = {
-                x: x * this.config_.cardSize + this.config_.cardSize,
+            this.config.extraCardPosition = {
+                x: x * this.config.cardSize + this.config.cardSize,
                 y: 0
             };
             this.data_.clickableShapes.push({
                 points: [{
-                    x: this.config_.extraCardPosition.x + this.config_.margin,
-                    y: this.config_.extraCardPosition.y + this.config_.margin
+                    x: this.config.extraCardPosition.x + this.config.margin,
+                    y: this.config.extraCardPosition.y + this.config.margin
                 }],
-                cat: this.config_.interactiveType.EXTRACARD
+                cat: this.config.interactiveType.EXTRACARD
             });
         }
 
     }
 
     initEndTurnButton_() {
-        this.config_.endTurnButtonPosition = {
-            x: this.config_.extraCardPosition.x,
-            y: this.canvas_.height - Math.floor(this.config_.cardSize / 2)
+        this.config.endTurnButtonPosition = {
+            x: this.config.extraCardPosition.x,
+            y: this.canvas_.height - Math.floor(this.config.cardSize / 2)
         }
 
         this.data_.rectangleButtons.push({
-            cat: this.config_.interactiveType.ENDTURNBUTTON,
+            cat: this.config.interactiveType.ENDTURNBUTTON,
             points: [{
-                x: this.config_.endTurnButtonPosition.x + this.config_.margin,
-                y: this.config_.endTurnButtonPosition.y - this.config_.margin
+                x: this.config.endTurnButtonPosition.x + this.config.margin,
+                y: this.config.endTurnButtonPosition.y - this.config.margin
             }],
-            width: this.config_.cardSize,
-            height: this.canvas_.height - this.config_.endTurnButtonPosition.y,
+            width: this.config.cardSize,
+            height: this.canvas_.height - this.config.endTurnButtonPosition.y,
             label: 'End Turn'
         })
     }
@@ -138,8 +155,8 @@ export class LabGame {
                         x: j,
                         y: -1
                     }],
-                    direction: this.config_.shiftDirection.DOWN,
-                    cat: this.config_.interactiveType.BUTTON,
+                    direction: this.config.shiftDirection.DOWN,
+                    cat: this.config.interactiveType.BUTTON,
                     enabled: true
                 });
                 this.data_.buttonShapes.push({
@@ -147,8 +164,8 @@ export class LabGame {
                         x: j,
                         y: -1
                     }],
-                    direction: this.config_.shiftDirection.UP,
-                    cat: this.config_.interactiveType.BUTTON,
+                    direction: this.config.shiftDirection.UP,
+                    cat: this.config.interactiveType.BUTTON,
                     enabled: true
                 });
             }
@@ -158,10 +175,10 @@ export class LabGame {
                 this.data_.buttonShapes.push({
                     points: [{
                         y: j,
-                        x: 0 + this.config_.margin / 2
+                        x: 0 + this.config.margin / 2
                     }],
-                    direction: this.config_.shiftDirection.RIGHT,
-                    cat: this.config_.interactiveType.BUTTON,
+                    direction: this.config.shiftDirection.RIGHT,
+                    cat: this.config.interactiveType.BUTTON,
                     enabled: true
                 });
                 this.data_.buttonShapes.push({
@@ -169,8 +186,8 @@ export class LabGame {
                         y: j,
                         x: -1
                     }],
-                    direction: this.config_.shiftDirection.LEFT,
-                    cat: this.config_.interactiveType.BUTTON,
+                    direction: this.config.shiftDirection.LEFT,
+                    cat: this.config.interactiveType.BUTTON,
                     enabled: true
                 });
             }
@@ -197,25 +214,25 @@ export class LabGame {
         }
 
         this.data_.lab[0][0] = {
-            shape: this.config_.cardType.CORNER,
+            shape: this.config.cardType.CORNER,
             orientation: 1,
             fixed: true,
             number: undefined
         };
         this.data_.lab[0][x - 1] = {
-            shape: this.config_.cardType.CORNER,
+            shape: this.config.cardType.CORNER,
             orientation: 2,
             fixed: true,
             number: undefined
         };
         this.data_.lab[y - 1][x - 1] = {
-            shape: this.config_.cardType.CORNER,
+            shape: this.config.cardType.CORNER,
             orientation: 3,
             fixed: true,
             number: undefined
         };
         this.data_.lab[y - 1][0] = {
-            shape: this.config_.cardType.CORNER,
+            shape: this.config.cardType.CORNER,
             orientation: 0,
             fixed: true,
             number: undefined
@@ -243,9 +260,7 @@ export class LabGame {
             while (!numberSet) {
                 let randomX = Math.floor(Math.random() * x);
                 let randomY = Math.floor(Math.random() * y);
-                console.log("randomX & randomY", randomX, randomY);
                 if (!this.data_.lab[randomX][randomY].number) {
-                    console.log("!this.data_.lab.number")
                     this.data_.lab[randomX][randomY].number = i + 1;
                     numberSet = true;
                 }
@@ -254,12 +269,11 @@ export class LabGame {
         }
     }
 
-    initPlayers_(hPlayers, mPlayers, x, y) {
+    initPlayers_(hPlayers, mPlayers) {
         let x = this.data_.lab[0].length;
         let y = this.data_.lab.length;
         let amountPlayers = hPlayers + mPlayers;
         let amountNumbers = Math.floor((x * y) / 3);
-        console.log("amountNumbers", amountNumbers);
         let usedNumbers = new Array(amountNumbers);
         for (let i = 0; i < amountPlayers; i++) {
             let indexX = (i % 2) * (x - 1);
@@ -279,7 +293,7 @@ export class LabGame {
                 listNumbers: listNumbers,
                 isDragging: false,
                 draggingPosition: [],
-                cat: this.config_.interactiveType.PLAYER,
+                cat: this.config.interactiveType.PLAYER,
                 name: "Player " + i,
                 human: human
             };
@@ -291,8 +305,8 @@ export class LabGame {
         this.data_.game.finished = false;
         if (this.draw) {
             let this_ = this;
-            window.onload = (this) => {
-                drawLab(this.config_, this.data_, this.ctx_);
+            window.onload = () => {
+                drawLab(this);
                 this.canvas_.addEventListener('mousedown', e => {
                     var x = e.offsetX;
                     var y = e.offsetY;
@@ -313,7 +327,7 @@ export class LabGame {
     }
 
     _rotateExtraCard_(action) {
-        for (i = 0; i < action; i++) {
+        for (let i = 0; i < action; i++) {
             this.data_.extraCard.orientation++
         }
     }
@@ -324,7 +338,7 @@ export class LabGame {
 
 
         switch (direction) {
-            case this.config_.shiftDirection.DOWN:
+            case this.config.shiftDirection.DOWN:
                 var movePlayer = this.playersinRow_(index);
                 this.data_.lab.forEach((line) => {
                     newCardonStack = line[index];
@@ -335,7 +349,7 @@ export class LabGame {
                     player.currentIndex[1] = (player.currentIndex[1] + 1) % this.data_.lab.length
                 });
                 break;
-            case this.config_.shiftDirection.UP:
+            case this.config.shiftDirection.UP:
                 var movePlayer = this.playersinRow_(index);
                 for (var i = this.data_.lab.length; i > 0; i--) {
                     newCardonStack = this.data_.lab[i - 1][index];
@@ -346,7 +360,7 @@ export class LabGame {
                     player.currentIndex[1] = (this.data_.lab.length + player.currentIndex[1] - 1) % this.data_.lab.length
                 });
                 break;
-            case this.config_.shiftDirection.RIGHT:
+            case this.config.shiftDirection.RIGHT:
                 var movePlayer = this.playersinLine_(index);
                 this.data_.lab[index].forEach((card, ind, array) => {
                     newCardonStack = card;
@@ -357,7 +371,7 @@ export class LabGame {
                     player.currentIndex[0] = (player.currentIndex[0] + 1) % this.data_.lab[0].length
                 });
                 break;
-            case this.config_.shiftDirection.LEFT:
+            case this.config.shiftDirection.LEFT:
                 var movePlayer = this.playersinLine_(index);
                 for (var i = this.data_.lab[0].length; i > 0; i--) {
                     newCardonStack = this.data_.lab[index][i - 1];
@@ -376,42 +390,54 @@ export class LabGame {
     _moveCurrentPlayer_(x, y) {
 
         let reward = 0;
+        let done = false;
 
-        let card = getCardFromMousePosition(x, y);
+        let card = [x,y]
         let currentPlayer = this.data_.players[this.data_.game.turns[this.data_.game.turns.length - 1].player];
         if (card) {
-            if (noPlayerOnCard(card)) {
-                if (findPath(currentPlayer.currentIndex, card, this.data_.lab)) {
+            if (this.noPlayerOnCard_(card)) {
+                if (findPath_l(currentPlayer.currentIndex, card, this.data_.lab)) {
+                    //reward += REWARDS.MOVED
                     currentPlayer.currentIndex = card;
 
                     // test if number on card
                     let numberOnCard = this.data_.lab[card[1]][card[0]].number;
                     if (numberOnCard) {
-                        let nextCardIndex = getNextNumberIndex(currentPlayer.listNumbers);
+                        let nextCardIndex = this.getNextNumberIndex_(currentPlayer.listNumbers);
                         if (nextCardIndex + 1 == currentPlayer.listNumbers.length) {
-                            this.endGame_();
-                            reward = REWARDS.WIN;
+                            if (numberOnCard == currentPlayer.listNumbers[nextCardIndex].number) {
+                                currentPlayer.listNumbers[nextCardIndex].solved = true;
+                                this.endGame_();
+                                reward += REWARDS.WIN;
+                                done = true
+                            }
+                            
                         } else {
                             if (numberOnCard == currentPlayer.listNumbers[nextCardIndex].number) {
                                 currentPlayer.listNumbers[nextCardIndex].solved = true;
-                                reward = REWARDS.NUMBER_FOUND;
+                                reward += REWARDS.NUMBER_FOUND;
                             }
                         }
 
                     }
 
+                } else {
+                    reward += REWARDS.PATH_NOT_FOUND
                 }
+            } else {
+                reward += REWARDS.PLAYER_ON_CARD
             }
         }
         this.endTurn_(card);
+        return { reward: reward, done: done }
     }
 
     step(a1, a2, a3) {
         let reward, done;
         //TODO: Calculate Reward, State and Done
         this._rotateExtraCard_(a1);
-        this._shiftCards_(Math.floor(a2 / Math.floor(this.data_.width / 2)), a2 % Math.floor(this.data_.width / 2));
-        ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.data_.width), a3 % this.data_.width));
+        this._shiftCards_(Math.floor(a2 / Math.floor(this.config.width / 2)), a2 % Math.floor(this.config.width / 2));
+        ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
         let state = this.getState();
 
         return { reward, state, done }
@@ -421,27 +447,41 @@ export class LabGame {
 
         let turns = this.data_.game.turns;
         let currentPlayerIndex = turns[turns.length - 1].player;
+        let lastShift = turns.length < 2 ? -1 : turns[turns.length - 2].shift;
 
         let relevantState = {
             lab: this.data_.lab,
             currentPlayer: currentPlayerIndex,
             players: this.data_.players,
             extraCard: this.data_.extraCard,
-            lastShift: turns[turns.length - 2].shift
+            lastShift: lastShift
         }
         return relevantState;
     }
 
     reset() {
-        this.initializeSnake_();
-        this.fruitSquares_ = null;
-        this.makeFruits_();
+
+        this.data_ = {
+            lab: [],
+            players: [],
+            buttonShapes: [],
+            clickableShapes: [],
+            rectangleButtons: [],
+            isDragging: false,
+            extraCard: undefined,
+            game: {}
+        }
+
+        this.initLab_(this.config.width, this.config.height);
+        this.initPlayers_(this.config.humanPlayers, this.config.machinePlayers);
+        this.initGame_();
+
         return this.getState();
-      }
+    }
 
     rotateExtraCard_() {
         this.data_.extraCard.orientation++;
-        drawLab(this.config_, this.data_, this.ctx_);
+        drawLab(this);
     }
 
     playersinRow_(row) {
@@ -467,7 +507,7 @@ export class LabGame {
     shiftCards_(index, direction) {
         this._shiftCards_(index, direction);
         this.disableAllButtons_();
-        drawLab(this.config_, this.data_, this.ctx_);
+        drawLab(this);
     }
 
     logPlayerPosition_(card) { }
@@ -485,11 +525,11 @@ export class LabGame {
         return buttons.find((button) => {
             if (button.direction == shift.direction) {
                 switch (shift.direction) {
-                    case this.config_.shiftDirection.UP:
-                    case this.config_.shiftDirection.DOWN:
+                    case this.config.shiftDirection.UP:
+                    case this.config.shiftDirection.DOWN:
                         return shift.index == button.points[0].x;
-                    case this.config_.shiftDirection.LEFT:
-                    case this.config_.shiftDirection.RIGHT:
+                    case this.config.shiftDirection.LEFT:
+                    case this.config.shiftDirection.RIGHT:
                         return shift.index == button.points[0].y;
                 }
             }
@@ -528,12 +568,12 @@ export class LabGame {
     }
 
     disableEndTurnButton_() {
-        let endTurnButton = this.getRectangleButton_(this.config_.interactiveType.ENDTURNBUTTON);
+        let endTurnButton = this.getRectangleButton_(this.config.interactiveType.ENDTURNBUTTON);
         endTurnButton.enabled = false;
     }
 
     enableEndTurnButton_() {
-        let endTurnButton = this.getRectangleButton_(this.config_.interactiveType.ENDTURNBUTTON);
+        let endTurnButton = this.getRectangleButton_(this.config.interactiveType.ENDTURNBUTTON);
         endTurnButton.enabled = true;
     }
 
@@ -541,7 +581,7 @@ export class LabGame {
         this.logPlayerPosition_(card);
         let turns = this.data_.game.turns;
         let playerIndex = turns[turns.length - 1].player;
-        
+
         if (this.draw) {
             this.enableAllButtons_();
             this.disableLastShiftButton_();
@@ -558,29 +598,29 @@ export class LabGame {
     defineShape_(shape) {
         var points = shape.points;
         switch (shape.cat) {
-            case this.config_.interactiveType.PLAYER:
+            case this.config.interactiveType.PLAYER:
                 this.ctx_.beginPath();
                 if (!shape.isDragging) {
-                    let point = getPlayerPixels(shape);
-                    this.ctx_.arc(point[0], point[1], this.config_.playerRadius, 0, 2 * Math.PI);
+                    let point = this.getPlayerPixels_(shape);
+                    this.ctx_.arc(point[0], point[1], this.config.playerRadius, 0, 2 * Math.PI);
                 } else {
                     this.ctx_.arc(shape.draggingPosition[0], shape.draggingPosition[1],
-                        this.config_.playerRadius, 0, 2 * Math.PI);
+                        this.config.playerRadius, 0, 2 * Math.PI);
                 }
                 break;
-            case this.config_.interactiveType.BUTTON:
-                let point = getButtonPixels(shape);
+            case this.config.interactiveType.BUTTON:
+                let point = this.getButtonPixels_(shape);
                 this.ctx_.beginPath();
-                this.ctx_.arc(point[0], point[1], this.config_.buttonRadius, 0, 2 * Math.PI);
+                this.ctx_.arc(point[0], point[1], this.config.buttonRadius, 0, 2 * Math.PI);
                 break;
-            case this.config_.interactiveType.EXTRACARD:
+            case this.config.interactiveType.EXTRACARD:
                 this.ctx_.beginPath();
                 this.ctx_.moveTo(points[0].x, points[0].y);
-                this.ctx_.lineTo(points[0].x + this.config_.cardSize, points[0].y);
-                this.ctx_.lineTo(points[0].x + this.config_.cardSize, points[0].y + this.config_.cardSize);
-                this.ctx_.lineTo(points[0].x, points[0].y + this.config_.cardSize);
+                this.ctx_.lineTo(points[0].x + this.config.cardSize, points[0].y);
+                this.ctx_.lineTo(points[0].x + this.config.cardSize, points[0].y + this.config.cardSize);
+                this.ctx_.lineTo(points[0].x, points[0].y + this.config.cardSize);
                 break;
-            case this.config_.interactiveType.ENDTURNBUTTON:
+            case this.config.interactiveType.ENDTURNBUTTON:
                 this.ctx_.beginPath();
                 this.ctx_.moveTo(points[0].x, points[0].y);
                 this.ctx_.lineTo(points[0].x + shape.width, points[0].y);
@@ -592,44 +632,44 @@ export class LabGame {
     }
 
     getCardFromMousePosition_(x, y) {
-        let xIndex = Math.floor((x - this.config_.margin) / this.config_.cardSize);
-        let yIndex = Math.floor((y - this.config_.margin) / this.config_.cardSize);
-        if ((xIndex < this.data_.lab.length) & (yIndex < this.data_.lab[0].length)) {
+        let xIndex = Math.floor((x - this.config.margin) / this.config.cardSize);
+        let yIndex = Math.floor((y - this.config.margin) / this.config.cardSize);
+        if ((xIndex < this.data_.lab.length) && (yIndex < this.data_.lab[0].length)) {
             return [xIndex, yIndex]
         }
         return undefined
     }
 
     getButtonPixels_(button) {
-        let dir = this.config_.shiftDirection;
+        let dir = this.config.shiftDirection;
         switch (button.direction) {
             case dir.DOWN:
                 return [
-                    button.points[0].x * this.config_.cardSize + this.config_.margin + Math.floor(this.config_.cardSize / 2),
-                    this.config_.margin / 2
+                    button.points[0].x * this.config.cardSize + this.config.margin + Math.floor(this.config.cardSize / 2),
+                    this.config.margin / 2
                 ];
             case dir.UP:
                 return [
-                    button.points[0].x * this.config_.cardSize + this.config_.margin + Math.floor(this.config_.cardSize / 2),
-                    this.data_.lab.length * this.config_.cardSize + this.config_.margin + this.config_.margin / 2
+                    button.points[0].x * this.config.cardSize + this.config.margin + Math.floor(this.config.cardSize / 2),
+                    this.data_.lab.length * this.config.cardSize + this.config.margin + this.config.margin / 2
                 ];
             case dir.RIGHT:
                 return [
-                    this.config_.margin / 2,
-                    button.points[0].y * this.config_.cardSize + this.config_.margin + Math.floor(this.config_.cardSize / 2)
+                    this.config.margin / 2,
+                    button.points[0].y * this.config.cardSize + this.config.margin + Math.floor(this.config.cardSize / 2)
                 ];
             case dir.LEFT:
                 return [
-                    this.data_.lab[0].length * this.config_.cardSize + this.config_.margin / 2 + this.config_.margin,
-                    button.points[0].y * this.config_.cardSize + this.config_.margin + Math.floor(this.config_.cardSize / 2)
+                    this.data_.lab[0].length * this.config.cardSize + this.config.margin / 2 + this.config.margin,
+                    button.points[0].y * this.config.cardSize + this.config.margin + Math.floor(this.config.cardSize / 2)
                 ];
         }
     }
 
     getPlayerPixels_(player) {
         return [
-            (player.currentIndex[0] * this.config_.cardSize) + this.config_.cardSize / 2 + this.config_.margin,
-            (player.currentIndex[1] * this.config_.cardSize) + this.config_.cardSize / 2 + this.config_.margin
+            (player.currentIndex[0] * this.config.cardSize) + this.config.cardSize / 2 + this.config.margin,
+            (player.currentIndex[1] * this.config.cardSize) + this.config.cardSize / 2 + this.config.margin
         ]
     }
 
@@ -653,7 +693,7 @@ export class LabGame {
             this.defineShape_(shape);
             if (this.ctx_.isPointInPath(x, y)) {
                 switch (shape.cat) {
-                    case this.config_.interactiveType.PLAYER:
+                    case this.config.interactiveType.PLAYER:
                         let turns = this.data_.game.turns;
                         if ((turns[turns.length - 1].player == index) && (turns[turns.length - 1].shift)) {
                             this.data_.isDragging = true;
@@ -670,7 +710,7 @@ export class LabGame {
                 this.defineShape_(shape);
                 if (this.ctx_.isPointInPath(x, y)) {
                     switch (shape.cat) {
-                        case this.config_.interactiveType.EXTRACARD:
+                        case this.config.interactiveType.EXTRACARD:
                             this.rotateExtraCard_();
                             break;
                         default:
@@ -683,12 +723,12 @@ export class LabGame {
                 if (this.ctx_.isPointInPath(x, y)) {
                     if (shape.enabled) {
                         switch (shape.direction) {
-                            case this.config_.shiftDirection.DOWN:
-                            case this.config_.shiftDirection.UP:
+                            case this.config.shiftDirection.DOWN:
+                            case this.config.shiftDirection.UP:
                                 this.shiftCards_(shape.points[0].x, shape.direction);
                                 break;
-                            case this.config_.shiftDirection.RIGHT:
-                            case this.config_.shiftDirection.LEFT:
+                            case this.config.shiftDirection.RIGHT:
+                            case this.config.shiftDirection.LEFT:
                                 this.shiftCards_(shape.points[0].y, shape.direction);
                                 break;
                             default:
@@ -702,7 +742,7 @@ export class LabGame {
                 if (this.ctx_.isPointInPath(x, y)) {
                     if (this.data_.game.turns[this.data_.game.turns.length - 1].shift) {
                         switch (shape.cat) {
-                            case this.config_.interactiveType.ENDTURNBUTTON:
+                            case this.config.interactiveType.ENDTURNBUTTON:
                                 this.endTurn_(this.data_.players[this.data_.game.turns[this.data_.game.turns.length - 1].player].currentIndex);
                                 break;
                             default:
@@ -720,10 +760,10 @@ export class LabGame {
             this.data_.players.forEach((shape, index) => {
 
                 switch (shape.cat) {
-                    case this.config_.interactiveType.PLAYER:
+                    case this.config.interactiveType.PLAYER:
                         if (shape.isDragging) {
                             shape.draggingPosition = [x, y];
-                            drawLab(this.config_, this.data_, this.ctx_);
+                            drawLab(this);
                         }
                         break;
                     default:
@@ -738,16 +778,16 @@ export class LabGame {
                 // test if the mouse is in the current shape
                 if (this.ctx_.isPointInPath(x, y)) {
                     switch (shape.cat) {
-                        case this.config_.interactiveType.EXTRACARD:
+                        case this.config.interactiveType.EXTRACARD:
                             markExtraCard();
                             mouseout = false;
                             break;
-                        case this.config_.interactiveType.HORTOPEDGECARD || this.config_.interactiveType.HORBOTEDGECARD:
-                            markMovableVerLine(shape.points[0].x, (this.data_.lab.length - 1) * this.config_.cardSize);
+                        case this.config.interactiveType.HORTOPEDGECARD || this.config.interactiveType.HORBOTEDGECARD:
+                            markMovableVerLine(shape.points[0].x, (this.data_.lab.length - 1) * this.config.cardSize);
                             mouseout = false;
                             break;
-                        case this.config_.interactiveType.VERLEFTEDGECARD || this.config_.interactiveType.VERRIGHTEDGECARD:
-                            markMovableHorLine((this.data_.lab[0].length - 1) * this.config_.cardSize, shape.points[0].y);
+                        case this.config.interactiveType.VERLEFTEDGECARD || this.config.interactiveType.VERRIGHTEDGECARD:
+                            markMovableHorLine((this.data_.lab[0].length - 1) * this.config.cardSize, shape.points[0].y);
                             mouseout = false;
                             break;
                     }
@@ -763,7 +803,7 @@ export class LabGame {
             // test if the mouse is in the current shape
             if (this.ctx_.isPointInPath(x, y)) {
                 switch (shape.cat) {
-                    case this.config_.interactiveType.PLAYER:
+                    case this.config.interactiveType.PLAYER:
                         //getCard
                         //if Card test Free
                         //if Free test Path
@@ -771,7 +811,7 @@ export class LabGame {
                         let card = this.getCardFromMousePosition_(x, y);
                         if (card) {
                             if (this.noPlayerOnCard_(card)) {
-                                if (findPath(shape.currentIndex, card, this.data_.lab)) {
+                                if (findPath_l(shape.currentIndex, card, this.data_.lab)) {
                                     shape.currentIndex = card;
 
                                     // test if number on card
@@ -801,66 +841,80 @@ export class LabGame {
             }
 
         });
-        drawLab(this.config_, this.data_, this.ctx_);
+        drawLab(this);
     }
 
 }
 
-export function getRandomActions() {
-    let action1 = getRandomInteger(0, NUM_ACTIONS_XCARD);
-    let action2 = getRandomInteger(0, NUM_ACTIONS_SHIFTCARD);
-    let action3 = getRandomInteger(0, NUM_ACTIONS_MOVE);
+function getRandomActions() {
+    let action1 = getRandomInteger_l(0, NUM_ACTIONS_XCARD);
+    let action2 = getRandomInteger_l(0, NUM_ACTIONS_SHIFTCARD);
+    let action3 = getRandomInteger_l(0, NUM_ACTIONS_MOVE);
     return [action1, action2, action3];
 }
 
-export function getStateTensors(state) {
+function getStateTensors(state, config) {
 
-/*     let relevantState = {
-        lab: this.data_.lab,
-        currentPlayer: currentPlayer,
-        otherPlayers,
-        extraCard: this.data_.extraCard,
-        lastShift: turns[turns.length - 2].shift
-    } */
+    /*     let relevantState = {
+            lab: this.data_.lab,
+            currentPlayer: currentPlayer,
+            otherPlayers,
+            extraCard: this.data_.extraCard,
+            lastShift: turns[turns.length - 2].shift
+        } */
+    if (!Array.isArray(state)) {
+        state = [state];
+    }
 
+    if (!Array.isArray(state)) {
+        state = [state];
+      }
+    const numExamples = state.length;
 
+    const columns =  config.width;
+    const rows = config.height;
+    const firstBuffer = tf_l.buffer([numExamples, rows, columns, 5]);
+    const secondBuffer = tf_l.buffer([numExamples, config.otherStateLength]);
+    
+    for (let n = 0; n < numExamples; ++n) {
+    
+        let currentPlayer = state[n].currentPlayer
+        let cpPosition = state[n].players[currentPlayer].currentIndex
 
-    let labShape, labOrientation, labNumber, labCP, labOP = [];
-    state.lab.forEach((column, cIndex) => {
+    state[n].lab.forEach((column, cIndex) => {
         column.forEach((card, rIndex) => {
-            labShape[cIndex][rIndex] = card.shape;
-            labOrientation[cIndex][rIndex] = card.orientation;
-            labNumber[cIndex][rIndex] = card.number;
-            labCP[cIndex][rIndex] = -1;
-            labOP[cIndex][rIndex] = -1;
+            firstBuffer.set(card.shape, n, cIndex, rIndex, 0)
+            firstBuffer.set(card.orientation, n, cIndex, rIndex, 1)
+            firstBuffer.set(card.number, n, cIndex, rIndex, 2)
+            firstBuffer.set(-1, n, cIndex, rIndex, 3)
+            firstBuffer.set(-1, n, cIndex, rIndex, 4)
         })
     })
 
-    labCP[state.players[currentPlayer].currentIndex[0]][state.players[currentPlayer].currentIndex[1]] = currentPlayer;
-    state.players.forEach(player => {
+    firstBuffer.set(currentPlayer,n, cpPosition[0],cpPosition[1],3)
+    state[n].players.forEach((player, index) => {
         if (currentPlayer != index) {
-            labOP[player.currentIndex[0]][player.currentIndex[1]] = index
+            firstBuffer.set(index,n, player.currentIndex[0],player.currentIndex[1],4)
         }
     })
 
+    let otherStateIndex = 0
 
-    let otherState = [];
-
-    state.currentPlayer.listNumbers.forEach((item) => {
-        otherState.push(item.number);
-        otherState.push(item.solved ? 1 : 0);
+    state[n].players[currentPlayer].listNumbers.forEach((item) => {
+        secondBuffer.set(item.number, n, otherStateIndex);
+        secondBuffer.set(item.solved ? 1 : 0, n, otherStateIndex + 1);
+        otherStateIndex += 2
     })
-
-    otherState.push(state.extraCard.shape);
-    otherState.push(state.extraCard.orientation);
-    otherState.push(state.extraCard.number);
-
-    otherState.push(((state.lastShift.index + 1) / 4) * (state.lastShift.direction + 1))
+    secondBuffer.set(state[n].extraCard.shape, n, otherStateIndex);
+    secondBuffer.set(state[n].extraCard.orientation, n, otherStateIndex +1);
+    secondBuffer.set(state[n].extraCard.number, n, otherStateIndex + 1);
+    secondBuffer.set(((state[n].lastShift.index + 1) / 4) * (state[n].lastShift.direction + 1), n, otherStateIndex + 1);
 
 
-    let labTensor = tf.tensor([labShape, labOrientation, labNumber, labCP, labOP]);
-    let otherTensor = tf.tensor1d(otherState);
+    }
 
-    return [labTensor, otherTensor]
     
+    return [firstBuffer.toTensor(), secondBuffer.toTensor()]
+
 }
+module.exports = { LabGame, REWARDS, getStateTensors, getRandomActions }

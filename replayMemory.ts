@@ -1,12 +1,15 @@
-import * as tf from '@tensorflow/tfjs';
+const tf_r = require('@tensorflow/tfjs-node')
+//import * as tf from '@tensorflow/tfjs'
+//import * as tf from '@tensorflow/tfjs';
 
 /** Replay buffer for DQN training. */
-export class ReplayMemory {
-  /**
-   * Constructor of ReplayMemory.
-   *
-   * @param {number} maxLen Maximal buffer length.
-   */
+class ReplayMemory {
+maxLen;
+buffer;
+index;
+length;
+bufferIndices_;
+initialNegativeReward;
   constructor(maxLen) {
     this.maxLen = maxLen;
     this.buffer = [];
@@ -15,6 +18,7 @@ export class ReplayMemory {
     }
     this.index = 0;
     this.length = 0;
+    this.initialNegativeReward = 0;
 
     this.bufferIndices_ = [];
     for (let i = 0; i < maxLen; ++i) {
@@ -29,6 +33,9 @@ export class ReplayMemory {
    */
   append(item) {
     this.buffer[this.index] = item;
+    if(this.index == 0) {
+      this.buffer[this.index][3] = this.initialNegativeReward
+    }
     this.length = Math.min(this.length + 1, this.maxLen);
     this.index = (this.index + 1) % this.maxLen;
   }
@@ -46,7 +53,7 @@ export class ReplayMemory {
       throw new Error(
           `batchSize (${batchSize}) exceeds buffer length (${this.maxLen})`);
     }
-    tf.util.shuffle(this.bufferIndices_);
+    tf_r.util.shuffle(this.bufferIndices_);
 
     const out = [];
     for (let i = 0; i < batchSize; ++i) {
@@ -56,14 +63,24 @@ export class ReplayMemory {
   }
 
   addNegativeReward(reward) {
-    this.buffer[this.index][3] += reward
+    if (this.index == 0) {
+      this.initialNegativeReward += reward 
+    } else {
+      this.buffer[this.index - 1][3] += reward
+    }
+
   }
 
   addFinalState(state) {
-    this.buffer[this.index][6] = state
-  }
-
-  setDone() {
-    this.buffer[this.index][4] = true
-  }
+    if (this.index > 0) {
+        this.buffer[this.index - 1][6] = state;
+    }
 }
+setDone() {
+    if (this.index > 0) {
+        this.buffer[this.index - 1][4] = true;
+    }
+
+}
+}
+module.exports = { ReplayMemory}
