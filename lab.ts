@@ -12,6 +12,7 @@ import * as tf from '@tensorflow/tfjs'
 import { findPath } from './findPath.js';
 import { drawLab } from './drawLab.js';
 import { getRandomInteger } from './utils.js';
+import { LabGamePlayer } from './machPlayer.js';
 
 
 const NUM_ACTIONS_XCARD = 4;
@@ -38,7 +39,9 @@ export class LabGame {
     data_;
     canvas_;
     ctx_;
-    constructor(hPlayers, mPlayers, width, height, draw) {
+    constructor(hPlayers, mPlayers, width, height, draw, agents?) {
+
+
 
 
 
@@ -291,12 +294,17 @@ export class LabGame {
         }
     }
 
-    initPlayers_(hPlayers, mPlayers) {
+    async initPlayers_(hPlayers, mPlayers) {
+        let qNet;
         let x = this.data_.lab[0].length;
         let y = this.data_.lab.length;
         let amountPlayers = hPlayers + mPlayers;
         let amountNumbers = Math.floor((x * y) / 3);
         let usedNumbers = new Array(amountNumbers);
+        if (mPlayers > 0) {
+            let LOCAL_MODEL_URL = '../models/dqn/model.json';
+            qNet = await tf.loadLayersModel(LOCAL_MODEL_URL);
+        }
         for (let i = 0; i < amountPlayers; i++) {
             let indexX = (i % 2) * (x - 1);
             let indexY = ((Math.floor(i / 2)) % 2) * (y - 1);
@@ -319,6 +327,11 @@ export class LabGame {
                 name: "Player " + i,
                 human: human
             };
+            if (this.draw && !human) {
+
+                this.data_.players[i].agent = new LabGamePlayer(this, qNet)
+
+            }
         }
     }
 
@@ -335,58 +348,61 @@ export class LabGame {
     }
 
     _shiftCards_(index, direction) {
-        var cardonStack = this.data_.extraCard;
-        var newCardonStack;
-
-
-        switch (direction) {
-            case this.config.shiftDirection.DOWN:
-                var movePlayer = this.playersinRow_(index);
-                this.data_.lab.forEach((line) => {
-                    newCardonStack = line[index];
-                    line[index] = cardonStack;
-                    cardonStack = newCardonStack;
-                })
-                movePlayer.forEach((player) => {
-                    player.currentIndex[1] = (player.currentIndex[1] + 1) % this.data_.lab.length
-                });
-                break;
-            case this.config.shiftDirection.UP:
-                var movePlayer = this.playersinRow_(index);
-                for (var i = this.data_.lab.length; i > 0; i--) {
-                    newCardonStack = this.data_.lab[i - 1][index];
-                    this.data_.lab[i - 1][index] = cardonStack;
-                    cardonStack = newCardonStack;
-                }
-                movePlayer.forEach((player) => {
-                    player.currentIndex[1] = (this.data_.lab.length + player.currentIndex[1] - 1) % this.data_.lab.length
-                });
-                break;
-            case this.config.shiftDirection.RIGHT:
-                var movePlayer = this.playersinLine_(index);
-                this.data_.lab[index].forEach((card, ind, array) => {
-                    newCardonStack = card;
-                    array[ind] = cardonStack;
-                    cardonStack = newCardonStack;
-                })
-                movePlayer.forEach((player) => {
-                    player.currentIndex[0] = (player.currentIndex[0] + 1) % this.data_.lab[0].length
-                });
-                break;
-            case this.config.shiftDirection.LEFT:
-                var movePlayer = this.playersinLine_(index);
-                for (var i = this.data_.lab[0].length; i > 0; i--) {
-                    newCardonStack = this.data_.lab[index][i - 1];
-                    this.data_.lab[index][i - 1] = cardonStack;
-                    cardonStack = newCardonStack;
-                }
-                movePlayer.forEach((player) => {
-                    player.currentIndex[0] = (this.data_.lab.length + player.currentIndex[0] - 1) % this.data_.lab[0].length
-                });
-                break;
+        if (index % 2 == 1) {
+            var cardonStack = this.data_.extraCard;
+            var newCardonStack;
+    
+    
+            switch (direction) {
+                case this.config.shiftDirection.DOWN:
+                    var movePlayer = this.playersinRow_(index);
+                    this.data_.lab.forEach((line) => {
+                        newCardonStack = line[index];
+                        line[index] = cardonStack;
+                        cardonStack = newCardonStack;
+                    })
+                    movePlayer.forEach((player) => {
+                        player.currentIndex[1] = (player.currentIndex[1] + 1) % this.data_.lab.length
+                    });
+                    break;
+                case this.config.shiftDirection.UP:
+                    var movePlayer = this.playersinRow_(index);
+                    for (var i = this.data_.lab.length; i > 0; i--) {
+                        newCardonStack = this.data_.lab[i - 1][index];
+                        this.data_.lab[i - 1][index] = cardonStack;
+                        cardonStack = newCardonStack;
+                    }
+                    movePlayer.forEach((player) => {
+                        player.currentIndex[1] = (this.data_.lab.length + player.currentIndex[1] - 1) % this.data_.lab.length
+                    });
+                    break;
+                case this.config.shiftDirection.RIGHT:
+                    var movePlayer = this.playersinLine_(index);
+                    this.data_.lab[index].forEach((card, ind, array) => {
+                        newCardonStack = card;
+                        array[ind] = cardonStack;
+                        cardonStack = newCardonStack;
+                    })
+                    movePlayer.forEach((player) => {
+                        player.currentIndex[0] = (player.currentIndex[0] + 1) % this.data_.lab[0].length
+                    });
+                    break;
+                case this.config.shiftDirection.LEFT:
+                    var movePlayer = this.playersinLine_(index);
+                    for (var i = this.data_.lab[0].length; i > 0; i--) {
+                        newCardonStack = this.data_.lab[index][i - 1];
+                        this.data_.lab[index][i - 1] = cardonStack;
+                        cardonStack = newCardonStack;
+                    }
+                    movePlayer.forEach((player) => {
+                        player.currentIndex[0] = (this.data_.lab.length + player.currentIndex[0] - 1) % this.data_.lab[0].length
+                    });
+                    break;
+            }
+            this.data_.extraCard = newCardonStack;
+            this.logShift_(index, direction);
         }
-        this.data_.extraCard = newCardonStack;
-        this.logShift_(index, direction);
+        
     };
 
     _moveCurrentPlayer_(x, y) {
@@ -449,7 +465,7 @@ export class LabGame {
 
         let turns = this.data_.game.turns;
         let currentPlayerIndex = turns[turns.length - 1].player;
-        let lastShift = turns.length < 2 ? -1 : turns[turns.length - 2].shift;
+        let lastShift = turns.length > 1 ? turns[turns.length - 2].shift ? turns[turns.length - 2].shift: {index:-1,direction:-1} : {index:-1,direction:-1};
 
         let relevantState = {
             lab: this.data_.lab,
@@ -588,8 +604,11 @@ export class LabGame {
             this.enableAllButtons_();
             this.disableLastShiftButton_();
         }
-
-        turns.push({ player: (playerIndex + 1) % this.data_.players.length });
+        let nextPlayer = (playerIndex + 1) % this.data_.players.length
+        turns.push({ player: nextPlayer });
+        if (this.draw && !this.data_.players[nextPlayer].human) {
+            this.data_.players[nextPlayer].agent.playStep()
+        }
     }
 
     endGame_() {

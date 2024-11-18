@@ -6,7 +6,6 @@ import { assertPositiveInteger } from './utils.js';
 import { ReplayMemory } from './replayMemory.js'
 
 
-
 export class LabGameAgent {
     game;
     epsilon;
