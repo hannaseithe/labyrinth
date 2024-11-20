@@ -9,9 +9,11 @@ export class ReplayMemory {
   length;
   bufferIndices_;
   initialNegativeReward;
+  bufferFull;
   constructor(maxLen) {
     this.maxLen = maxLen;
     this.buffer = [];
+    this.bufferFull = false;
     for (let i = 0; i < maxLen; ++i) {
       this.buffer.push(null);
     }
@@ -37,6 +39,8 @@ export class ReplayMemory {
     }
     this.length = Math.min(this.length + 1, this.maxLen);
     this.index = (this.index + 1) % this.maxLen;
+    this.bufferFull = this.index == this.maxLen -1 ? true : this.bufferFull
+    return this.bufferFull
   }
 
   /**

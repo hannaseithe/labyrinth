@@ -256,5 +256,26 @@ export function drawLab(game) {
     } else {
         drawWinnerScreen()
     }
+}
+
+    export function drawMachLab(game) {
+        config = game.config;
+        data = game.data_;
+        ctx = game.ctx_;
+        canvas = game.canvas_;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!data.game.finished) {
+            data.lab.forEach((line, line_index) => {
+                line.forEach((card, row_index) => {
+                    drawCardinLab(row_index, line_index, card)
+                })
+            })
+            drawXCard();
+            drawPlayers(game);
+
+            drawDisplay();
+        } else {
+            drawWinnerScreen()
+        }
     
 }

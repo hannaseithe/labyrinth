@@ -10,16 +10,10 @@
 // canvas variables
 import * as tf from '@tensorflow/tfjs'
 import { findPath } from './findPath.js';
-import { drawLab } from './drawLab.js';
+import { drawLab, drawMachLab } from './drawLab.js';
 import { getRandomInteger } from './utils.js';
 import { LabGamePlayer } from './machPlayer.js';
 
-
-const NUM_ACTIONS_XCARD = 4;
-const NUM_ACTIONS_SHIFTCARD = 16;
-const NUM_ACTIONS_MOVE = 81;
-
-const NUM_ACTIONS = NUM_ACTIONS_XCARD + NUM_ACTIONS_SHIFTCARD + NUM_ACTIONS_MOVE;
 
 export const REWARDS = {
     WIN: 100,
@@ -55,6 +49,8 @@ export class LabGame {
             extraCardPosition: undefined,
             height: height,
             width: width,
+            numActionsMove: width * height,
+            numActionsShiftCard: (Math.floor(width / 2) + Math.floor(height / 2)) * 2,
             numActions: 4 + width * height + (Math.floor(width / 2) + Math.floor(height / 2)) * 2,
             otherStateLength: 2 * Math.floor(Math.floor(width * height / 3) / (hPlayers + mPlayers)) + 4,
             humanPlayers: hPlayers,
@@ -301,9 +297,10 @@ export class LabGame {
         let amountPlayers = hPlayers + mPlayers;
         let amountNumbers = Math.floor((x * y) / 3);
         let usedNumbers = new Array(amountNumbers);
-        if (mPlayers > 0) {
+        if (this.draw && mPlayers > 0) {
             let LOCAL_MODEL_URL = '../models/dqn/model.json';
             qNet = await tf.loadLayersModel(LOCAL_MODEL_URL);
+            console.log('Local Model loaded')
         }
         for (let i = 0; i < amountPlayers; i++) {
             let indexX = (i % 2) * (x - 1);
@@ -341,10 +338,15 @@ export class LabGame {
 
     }
 
-    _rotateExtraCard_(action) {
+    _rotateExtraCard_(action):Promise<any> {
         for (let i = 0; i < action; i++) {
             this.data_.extraCard.orientation++
         }
+        if (this.draw) {
+            drawMachLab(this)
+            return new Promise(resolve => setTimeout(resolve, 500));
+        }
+        return new Promise(resolve => resolve(0));
     }
 
     _shiftCards_(index, direction) {
@@ -402,10 +404,14 @@ export class LabGame {
             this.data_.extraCard = newCardonStack;
             this.logShift_(index, direction);
         }
-        
+        if (this.draw) {
+            drawMachLab(this)
+            return new Promise(resolve => setTimeout(resolve, 500));
+        }
+        return new Promise(resolve => resolve(0));
     };
 
-    _moveCurrentPlayer_(x, y) {
+    _moveCurrentPlayer_(x, y):Promise<any> {
 
         let reward = 0;
         let done = false;
@@ -446,16 +452,21 @@ export class LabGame {
                 reward += REWARDS.PLAYER_ON_CARD
             }
         }
+        
         this.endTurn_(card);
-        return { reward: reward, done: done }
+        if (this.draw) {
+            drawMachLab(this)
+            return new Promise(resolve => setTimeout(() => resolve({ reward: reward, done: done }), 500));
+        }
+        return new Promise(resolve => resolve({ reward: reward, done: done }))
     }
 
-    step(a1, a2, a3) {
+    async step(a1, a2, a3) {
         let reward, done;
         //TODO: Calculate Reward, State and Done
-        this._rotateExtraCard_(a1);
-        this._shiftCards_(Math.floor(a2 / Math.floor(this.config.width / 2)), a2 % Math.floor(this.config.width / 2));
-        ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
+        await this._rotateExtraCard_(a1);
+        await this._shiftCards_(Math.floor(a2 / Math.floor(this.config.width / 2)), a2 % Math.floor(this.config.width / 2));
+        ({ reward, done } = await this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
         let state = this.getState();
 
         return { reward, state, done }
@@ -867,10 +878,10 @@ export class LabGame {
 
 }
 
-export function getRandomActions() {
-    let action1 = getRandomInteger(0, NUM_ACTIONS_XCARD);
-    let action2 = getRandomInteger(0, NUM_ACTIONS_SHIFTCARD);
-    let action3 = getRandomInteger(0, NUM_ACTIONS_MOVE);
+export function getRandomActions(game) {
+    let action1 = getRandomInteger(0, 4);
+    let action2 = getRandomInteger(0, game.config.numActionsShiftCard);
+    let action3 = getRandomInteger(0,game.config.numActionsMove);
     return [action1, action2, action3];
 }
 
@@ -906,11 +917,12 @@ export function getStateTensors(state, config) {
             column.forEach((card, rIndex) => {
                 firstBuffer.set(card.shape, n, cIndex, rIndex, 0)
                 firstBuffer.set(card.orientation, n, cIndex, rIndex, 1)
-                firstBuffer.set(card.number, n, cIndex, rIndex, 2)
+                firstBuffer.set(card.number ? card.number : -1, n, cIndex, rIndex, 2)
                 firstBuffer.set(-1, n, cIndex, rIndex, 3)
                 firstBuffer.set(-1, n, cIndex, rIndex, 4)
             })
         })
+
 
         firstBuffer.set(currentPlayer, n, cpPosition[0], cpPosition[1], 3)
         state[n].players.forEach((player, index) => {

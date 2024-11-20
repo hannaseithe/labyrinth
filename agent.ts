@@ -61,7 +61,7 @@ export class LabGameAgent {
         const state = this.game.getState();
         if (Math.random() < this.epsilon) {
             // Pick an action at random.
-            [action1, action2, action3 ] = getRandomActions();
+            [action1, action2, action3 ] = getRandomActions(this.game);
         } else {
             // Greedily pick an action based on online DQN output.
             tf.tidy(() => {
@@ -69,14 +69,14 @@ export class LabGameAgent {
                     getStateTensors(state,this.game.config);
                 const predictionTensor = this.onlineNetwork.predict([labTensor,otherTensor]).reshape([-1]);
                 action1 = predictionTensor.slice(0, 4).argMax(-1).dataSync()[0]
-                action2 = predictionTensor.slice(4, 16).argMax(-1).dataSync()[0]
-                action3 = predictionTensor.slice(20, 81).argMax(-1).dataSync()[0]
+                action2 = predictionTensor.slice(4, this.game.config.numActionsShiftCard).argMax(-1).dataSync()[0]
+                action3 = predictionTensor.slice(4 + this.game.config.numActionsShiftCard, this.game.config.numActionsMove).argMax(-1).dataSync()[0]
             });
         }
 
         const { state: nextState, reward, done } = this.game.step(action1, action2, action3);
 
-        this.replayMemory.append([state, [action1, action2, action3], reward, 0, done, nextState, null]);
+        let bufferFull = this.replayMemory.append([state, [action1, action2, action3], reward, 0, done, nextState, null]);
 
         this.cumulativeReward += reward;
 
@@ -93,7 +93,8 @@ export class LabGameAgent {
             state: nextState,
             cumulativeReward: this.cumulativeReward,
             done: done,
-            negativeReward: negativeReward
+            negativeReward: negativeReward,
+            bufferFull : bufferFull
         }
 
 
@@ -107,10 +108,10 @@ export class LabGameAgent {
                 batch.map(example => example[0]), this.game.config);
 
             const actionBatch = batch.map(example => tf.oneHot(example[1][0],4)
-            .concat(tf.oneHot(example[1][1],16))
-            .concat(tf.oneHot(example[1][2],81)).arraySync())
+            .concat(tf.oneHot(example[1][1],this.game.config.numActionsShiftCard))
+            .concat(tf.oneHot(example[1][2],this.game.config.numActionsMove)).arraySync())
                 
-            const actionTensor = tf.tensor2d(actionBatch,[16,101]);      
+            const actionTensor = tf.tensor2d(actionBatch,[batchSize,this.game.config.numActions]);      
             const qs = this.onlineNetwork.apply(stateTensors, { training: true }).mul(actionTensor).sum(-1);
 
             const rewardTensor = tf.tensor1d(batch.map(example => example[2] + example [3]));
@@ -162,6 +163,7 @@ export class LabGameSuperAgent {
     game;
     replayBufferSize;
     cumulativeRewards;
+    buffersFull = false;
     constructor(number, game, config) {
         this.game = game
         this.onlineNetwork =
@@ -186,9 +188,11 @@ export class LabGameSuperAgent {
         let done_;
         let turnResults = [];
         let step = 0;
+        let buffersFull = true
 
         for (let i = 0; i < this.number; i++) {
-            let { state, cumulativeReward, negativeReward, done} = this.agents[i].playStep();
+            let { state, cumulativeReward, negativeReward, done, bufferFull} = this.agents[i].playStep();
+            buffersFull = !bufferFull ? false: buffersFull;
             done_ = done;
             if (!done) {
                 turnResults.push({ state, cumulativeReward, done });
@@ -208,7 +212,7 @@ export class LabGameSuperAgent {
                 break;
             }
         }
-
+        this.buffersFull = buffersFull;
 
        this.cumulativeRewards = this.agents.map(agent => agent.cumulativeReward)
 
