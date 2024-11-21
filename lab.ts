@@ -8,7 +8,7 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
-import * as tf from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs-node'
 import { findPath } from './findPath.js';
 import { drawLab, drawMachLab } from './drawLab.js';
 import { getRandomInteger } from './utils.js';
@@ -52,7 +52,7 @@ export class LabGame {
             numActionsMove: width * height,
             numActionsShiftCard: (Math.floor(width / 2) + Math.floor(height / 2)) * 2,
             numActions: 4 + width * height + (Math.floor(width / 2) + Math.floor(height / 2)) * 2,
-            otherStateLength: 2 * Math.floor(Math.floor(width * height / 3) / (hPlayers + mPlayers)) + 4,
+            otherStateLength: 2 * Math.floor(Math.floor(width * height / 3) / (hPlayers + mPlayers)) + 5,
             humanPlayers: hPlayers,
             machinePlayers: mPlayers,
             cardType: {
@@ -346,7 +346,6 @@ export class LabGame {
             drawMachLab(this)
             return new Promise(resolve => setTimeout(resolve, 500));
         }
-        return new Promise(resolve => resolve(0));
     }
 
     _shiftCards_(index, direction) {
@@ -408,10 +407,9 @@ export class LabGame {
             drawMachLab(this)
             return new Promise(resolve => setTimeout(resolve, 500));
         }
-        return new Promise(resolve => resolve(0));
     };
 
-    _moveCurrentPlayer_(x, y):Promise<any> {
+    _moveCurrentPlayer_(x, y):Promise<any> | any {
 
         let reward = 0;
         let done = false;
@@ -458,10 +456,21 @@ export class LabGame {
             drawMachLab(this)
             return new Promise(resolve => setTimeout(() => resolve({ reward: reward, done: done }), 500));
         }
-        return new Promise(resolve => resolve({ reward: reward, done: done }))
+        return { reward: reward, done: done }
     }
 
-    async step(a1, a2, a3) {
+    step(a1, a2, a3) {
+        let reward, done;
+        //TODO: Calculate Reward, State and Done
+        this._rotateExtraCard_(a1);
+        this._shiftCards_(Math.floor(a2 / Math.floor(this.config.width / 2)), a2 % Math.floor(this.config.width / 2));
+        ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
+        let state = this.getState();
+
+        return { reward, state, done }
+    }
+
+    async stepAsync(a1, a2, a3) {
         let reward, done;
         //TODO: Calculate Reward, State and Done
         await this._rotateExtraCard_(a1);
@@ -905,7 +914,7 @@ export function getStateTensors(state, config) {
 
     const columns = config.width;
     const rows = config.height;
-    const firstBuffer = tf.buffer([numExamples, rows, columns, 5]);
+    const firstBuffer = tf.buffer([numExamples, 5, rows, columns]);
     const secondBuffer = tf.buffer([numExamples, config.otherStateLength]);
 
     for (let n = 0; n < numExamples; ++n) {
@@ -915,19 +924,16 @@ export function getStateTensors(state, config) {
 
         state[n].lab.forEach((column, cIndex) => {
             column.forEach((card, rIndex) => {
-                firstBuffer.set(card.shape, n, cIndex, rIndex, 0)
-                firstBuffer.set(card.orientation, n, cIndex, rIndex, 1)
-                firstBuffer.set(card.number ? card.number : -1, n, cIndex, rIndex, 2)
-                firstBuffer.set(-1, n, cIndex, rIndex, 3)
-                firstBuffer.set(-1, n, cIndex, rIndex, 4)
+                firstBuffer.set(card.shape + 1, n,0,  cIndex, rIndex)
+                firstBuffer.set(card.orientation % 4 + 1, n, 1, cIndex, rIndex)
+                firstBuffer.set(card.number ? card.number : 0, n, 2,  cIndex, rIndex)
             })
         })
 
-
-        firstBuffer.set(currentPlayer, n, cpPosition[0], cpPosition[1], 3)
+        firstBuffer.set(currentPlayer+1, n, 3, cpPosition[0], cpPosition[1])
         state[n].players.forEach((player, index) => {
             if (currentPlayer != index) {
-                firstBuffer.set(index, n, player.currentIndex[0], player.currentIndex[1], 4)
+                firstBuffer.set(index+1, n, 4, player.currentIndex[0], player.currentIndex[1])
             }
         })
 
@@ -938,10 +944,11 @@ export function getStateTensors(state, config) {
             secondBuffer.set(item.solved ? 1 : 0, n, otherStateIndex + 1);
             otherStateIndex += 2
         })
-        secondBuffer.set(state[n].extraCard.shape, n, otherStateIndex);
-        secondBuffer.set(state[n].extraCard.orientation, n, otherStateIndex + 1);
-        secondBuffer.set(state[n].extraCard.number, n, otherStateIndex + 1);
-        secondBuffer.set(((state[n].lastShift.index + 1) / 4) * (state[n].lastShift.direction + 1), n, otherStateIndex + 1);
+        secondBuffer.set(state[n].extraCard.shape + 1, n, otherStateIndex);
+        secondBuffer.set(state[n].extraCard.orientation % 4 + 1, n, otherStateIndex + 1);
+        secondBuffer.set(state[n].extraCard.number ? state[n].extraCard.number : 0, n, otherStateIndex + 2);
+        secondBuffer.set(state[n].lastShift.index + 1, n, otherStateIndex + 3);
+        secondBuffer.set(state[n].lastShift.direction + 1 , n, otherStateIndex + 4);
 
 
     }

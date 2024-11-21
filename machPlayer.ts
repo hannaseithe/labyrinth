@@ -27,7 +27,7 @@ export class LabGamePlayer {
             });
         
 
-        this.game.step(action1, action2, action3);
+        this.game.stepAsync(action1, action2, action3);
 
 
     }

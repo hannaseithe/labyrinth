@@ -26,7 +26,10 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
 
 
   while (!superAgent.buffersFull) {
-    const { done, cumulativeRewards } = superAgent.playTurn();
+    const { done, cumulativeRewards} = superAgent.playTurn();
+    if (done) {
+      console.log(`game finished - counter: ${superAgent.doneCounter}`)
+    }
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
     console.log("Turn: " + superAgent.frameCount)
     console.log("Total Reward: " + totalReward)
@@ -41,6 +44,7 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
     const { done, cumulativeRewards } = superAgent.playTurn();
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
     if (done) {
+      console.log(`game finished - counter: ${superAgent.doneCounter}`)
       
 
       if (totalReward > totalRewardBest) {
@@ -123,7 +127,7 @@ function parseArguments() {
   });
   parser.addArgument('--maxNumFrames', {
     type: 'float',
-    defaultValue: 1e6,
+    defaultValue: 1e4,
     help: 'Maximum number of frames to run durnig the training. ' +
       'Training ends immediately when this frame count is reached.'
   });
@@ -139,33 +143,33 @@ function parseArguments() {
   });
   parser.addArgument('--epsilonFinal', {
     type: 'float',
-    defaultValue: 0.01,
+    defaultValue: 0.05,
     help: 'Final value of epsilon, used for the epsilon-greedy algorithm.'
   });
   parser.addArgument('--epsilonDecayFrames', {
     type: 'int',
-    defaultValue: 3e5,
+    defaultValue: 3e3,
     help: 'Number of frames of game over which the value of epsilon ' +
       'decays from epsilonInit to epsilonFinal'
   });
   parser.addArgument('--batchSize', {
     type: 'int',
-    defaultValue: 32,
+    defaultValue: 5e1,
     help: 'Batch size for DQN training.'
   });
   parser.addArgument('--gamma', {
     type: 'float',
-    defaultValue: 0.99,
+    defaultValue: 0.95,
     help: 'Reward discount rate.'
   });
   parser.addArgument('--learningRate', {
     type: 'float',
-    defaultValue: 1e-3,
+    defaultValue: 1e-2,
     help: 'Learning rate for DQN training.'
   });
   parser.addArgument('--syncEveryFrames', {
     type: 'int',
-    defaultValue: 1e3,
+    defaultValue: 1e2,
     help: 'Frequency at which weights are sync\'ed from the online network ' +
       'to the target network.'
   });

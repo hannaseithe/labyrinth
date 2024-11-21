@@ -38,8 +38,11 @@ export class ReplayMemory {
       this.buffer[this.index][3] = this.initialNegativeReward
     }
     this.length = Math.min(this.length + 1, this.maxLen);
+    if (this.index == this.maxLen - 1) {
+      this.bufferFull = true
+    }
     this.index = (this.index + 1) % this.maxLen;
-    this.bufferFull = this.index == this.maxLen -1 ? true : this.bufferFull
+
     return this.bufferFull
   }
 
