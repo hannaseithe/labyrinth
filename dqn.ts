@@ -14,7 +14,7 @@ export function createDeepQNetwork(h, w, numA1,numA2, numA3, otherStateLength) {
     // a rank 3 tensor for input1 respresenting all the lab grid based state (card-shape, 
     //card-orientation, card-number, player position. other player position)
     // a rank 1 tensor with the other State for input 2 that represents the currentPlayers cardTodoList, and the Extra Card
-    const input1 = tf.input({ shape: [ h, w, 5] });
+    const input1 = tf.input({ shape: [ 7, h, w] });
     const input2 = tf.input({ shape: [otherStateLength] })
 
     // First dense layer uses relu activation.
@@ -23,10 +23,19 @@ export function createDeepQNetwork(h, w, numA1,numA2, numA3, otherStateLength) {
         kernelSize: 3,
         strides: 1,
         activation: 'relu',
-        inputShape: [h, w, 5]
+        inputShape: [7, h, w]
     }).apply(input1);
 
-    const pool1 = tf.layers.maxPooling2d({ poolSize: [2, 2] }).apply(cLayer1);
+    const bLayer1 = tf.layers.batchNormalization().apply(cLayer1);
+
+    const cLayer2 = tf.layers.conv2d({
+        filters: 64,
+        kernelSize: 3,
+        strides: 1,
+        activation: 'relu'
+    }).apply(bLayer1);
+
+    const pool1 = tf.layers.maxPooling2d({ poolSize: [2, 2] }).apply(cLayer2);
     const flatten1 = tf.layers.flatten().apply(pool1);
     /*const bLayer1 = tf.layers.batchNormalization().apply(cLayer1);
 
@@ -46,7 +55,7 @@ export function createDeepQNetwork(h, w, numA1,numA2, numA3, otherStateLength) {
         activation: 'relu'
     }).apply(bLayer2);*/
 
-    const dLayer2 = tf.layers.dense({ units: 64, activation: 'relu' }).apply(input2);
+    const dLayer2 = tf.layers.dense({ units: 20, activation: 'relu' }).apply(input2);
 
     const concatenated = tf.layers.concatenate().apply([flatten1 as tf.SymbolicTensor, dLayer2 as tf.SymbolicTensor]);
 

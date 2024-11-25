@@ -19,6 +19,7 @@ export class LabGameAgent {
     targetNetwork;
     replayMemory;
     cumulativeReward;
+    losses;
     constructor(game, config, online, target) {
 
         assertPositiveInteger(config.epsilonDecayFrames, 'Epsilon Decay Frames');
@@ -46,6 +47,7 @@ export class LabGameAgent {
         this.cumulativeReward = 0;
 
         this.reset();
+        this.losses = []
 
     }
 
@@ -62,18 +64,24 @@ export class LabGameAgent {
         if (Math.random() < this.epsilon) {
             // Pick an action at random.
             [action1, action2, action3] = getRandomActions(this.game);
+            while (!this.game.isMoveAllowed(action3, state.currentPlayer)) {
+                [action1, action2, action3] = getRandomActions(this.game);
+            }
         } else {
             // Greedily pick an action based on online DQN output.
             tf.tidy(() => {
                 const [labTensor, otherTensor] =
                     getStateTensors(state, this.game.config);
                 // const a = labTensor.dataSync()
-                const b = otherTensor.dataSync()
+                //const b = otherTensor.dataSync()
                 const predictionTensor = this.onlineNetwork.predict([labTensor, otherTensor]);
                 action1 = predictionTensor[0].argMax(-1).dataSync()[0]
                 action2 = predictionTensor[1].argMax(-1).dataSync()[0]
                 action3 = predictionTensor[2].argMax(-1).dataSync()[0]
             });
+            while (!this.game.isMoveAllowed(action3, state.currentPlayer)) {
+                [,, action3] = getRandomActions(this.game);
+            }
         }
 
         const { state: nextState, reward, done } = this.game.step(action1, action2, action3);
@@ -137,7 +145,8 @@ export class LabGameAgent {
                 rewardTensor.add(tf.concat([nmq1.max(-1),nmq2.max(-1),nmq3.max(-1)]).sum(-1).mul(doneMask).mul(gamma));
             //const i = targetQs.dataSync()
             const losses = tf.losses.meanSquaredError(targetQs, qs)
-            //const j = losses.dataSync()
+            const j = losses.dataSync()[0]
+            this.losses.push(j)
             return losses;
         });
 
@@ -224,6 +233,9 @@ export class LabGameSuperAgent {
 
                 this.agents[i].addFinalState(state);
                 this.agents[i].setDone();
+                if (i < this.number -1) {
+                    buffersFull = false
+                }
                 break;
             }
         }

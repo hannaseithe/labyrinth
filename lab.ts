@@ -8,8 +8,8 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
-import * as tf from '@tensorflow/tfjs-node'
-import { findPath } from './findPath.js';
+import * as tf from '@tensorflow/tfjs'
+import { findPath, getCardCode } from './findPath.js';
 import { drawLab, drawMachLab } from './drawLab.js';
 import { getRandomInteger } from './utils.js';
 import { LabGamePlayer } from './machPlayer.js';
@@ -276,6 +276,7 @@ export class LabGame {
 
 
         let amountNumbers = Math.floor((x * y) / 3);
+        this.config.amountNumbers = amountNumbers;
         for (let i = 0; i < amountNumbers; i++) {
             let numberSet = false;
             while (!numberSet) {
@@ -352,7 +353,6 @@ export class LabGame {
         if (index % 2 == 1) {
             var cardonStack = this.data_.extraCard;
             var newCardonStack;
-    
     
             switch (direction) {
                 case this.config.shiftDirection.DOWN:
@@ -463,7 +463,7 @@ export class LabGame {
         let reward, done;
         //TODO: Calculate Reward, State and Done
         this._rotateExtraCard_(a1);
-        this._shiftCards_(Math.floor(a2 / Math.floor(this.config.width / 2)), a2 % Math.floor(this.config.width / 2));
+        this._shiftCards_(((Math.floor(a2/4)) * 2) + 1, a2 % 4);
         ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
         let state = this.getState();
 
@@ -885,6 +885,14 @@ export class LabGame {
         drawLab(this);
     }
 
+    isMoveAllowed(a3,cp) {
+        let cpIndex = this.data_.players[cp].currentIndex
+        let r = Math.floor(a3 / this.config.width)
+        let c = a3 % this.config.width
+        if (r == cpIndex[0] && c == cpIndex[1]) return true;
+        return this.noPlayerOnCard_([r,c]) && findPath(cpIndex, [r,c], this.data_.lab)
+    }
+
 }
 
 export function getRandomActions(game) {
@@ -914,8 +922,9 @@ export function getStateTensors(state, config) {
 
     const columns = config.width;
     const rows = config.height;
-    const firstBuffer = tf.buffer([numExamples, 5, rows, columns]);
+    const firstBuffer = tf.buffer([numExamples, 7, rows, columns]);
     const secondBuffer = tf.buffer([numExamples, config.otherStateLength]);
+    let pNumber = state[0].players.length
 
     for (let n = 0; n < numExamples; ++n) {
 
@@ -924,31 +933,34 @@ export function getStateTensors(state, config) {
 
         state[n].lab.forEach((column, cIndex) => {
             column.forEach((card, rIndex) => {
-                firstBuffer.set(card.shape + 1, n,0,  cIndex, rIndex)
-                firstBuffer.set(card.orientation % 4 + 1, n, 1, cIndex, rIndex)
-                firstBuffer.set(card.number ? card.number : 0, n, 2,  cIndex, rIndex)
+                firstBuffer.set((card.shape + 1)/4, n,0,  cIndex, rIndex)
+                firstBuffer.set((card.orientation % 4 + 1)/4, n, 1, cIndex, rIndex)
+                firstBuffer.set(card.number ? card.number / config.amountNumbers : 0, n, 2,  cIndex, rIndex)
+                firstBuffer.set(getCardCode(card.shape,card.orientation)/15,n,3,cIndex,rIndex)
+                firstBuffer.set(findPath(cpPosition, [cIndex,rIndex],state[n].lab)? 1:0,n,4,cIndex,rIndex)
             })
         })
 
-        firstBuffer.set(currentPlayer+1, n, 3, cpPosition[0], cpPosition[1])
+        firstBuffer.set(1, n, 5, cpPosition[0], cpPosition[1])
+        
         state[n].players.forEach((player, index) => {
             if (currentPlayer != index) {
-                firstBuffer.set(index+1, n, 4, player.currentIndex[0], player.currentIndex[1])
+                firstBuffer.set((index+1)/pNumber, n, 6, player.currentIndex[0], player.currentIndex[1])
             }
         })
 
         let otherStateIndex = 0
 
-        state[n].players[currentPlayer].listNumbers.forEach((item) => {
-            secondBuffer.set(item.number, n, otherStateIndex);
-            secondBuffer.set(item.solved ? 1 : 0, n, otherStateIndex + 1);
+        state[n].players[currentPlayer].listNumbers.forEach((card) => {
+            secondBuffer.set(card.number / config.amountNumbers, n, otherStateIndex);
+            secondBuffer.set(card.solved ? 1 : 0, n, otherStateIndex + 1);
             otherStateIndex += 2
         })
-        secondBuffer.set(state[n].extraCard.shape + 1, n, otherStateIndex);
-        secondBuffer.set(state[n].extraCard.orientation % 4 + 1, n, otherStateIndex + 1);
-        secondBuffer.set(state[n].extraCard.number ? state[n].extraCard.number : 0, n, otherStateIndex + 2);
-        secondBuffer.set(state[n].lastShift.index + 1, n, otherStateIndex + 3);
-        secondBuffer.set(state[n].lastShift.direction + 1 , n, otherStateIndex + 4);
+        secondBuffer.set((state[n].extraCard.shape + 1)/4, n, otherStateIndex);
+        secondBuffer.set((state[n].extraCard.orientation % 4 + 1) / 4, n, otherStateIndex + 1);
+        secondBuffer.set(state[n].extraCard.number ? state[n].extraCard.number  / config.amountNumbers : 0, n, otherStateIndex + 2);
+        secondBuffer.set(state[n].lastShift.index / (columns - 2), n, otherStateIndex + 3);
+        secondBuffer.set(state[n].lastShift.direction / 3 , n, otherStateIndex + 4);
 
 
     }

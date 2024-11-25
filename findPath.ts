@@ -112,7 +112,7 @@ function findPathR(startIndex, goalIndex, lab, path) {
         nextIndex = [startIndex[0], startIndex[1] + 1];
         testNextIndex(startIndex, nextIndex, goalIndex, lab, path);
     }
-    
+
     // test down
     if (startIndex[0] < lab.length - 1) {
         nextIndex = [startIndex[0] + 1, startIndex[1]];
@@ -122,8 +122,8 @@ function findPathR(startIndex, goalIndex, lab, path) {
     if (startIndex[1] > 0) {
         nextIndex = [startIndex[0], startIndex[1] - 1];
         testNextIndex(startIndex, nextIndex, goalIndex, lab, path);
-    } 
-    
+    }
+
     return pathExists;
 };
 
@@ -131,7 +131,22 @@ function findPathR(startIndex, goalIndex, lab, path) {
 export function findPath(startIndex, goalIndex, lab) {
     shortestPath = [];
     pathExists = false;
-    let startIndexR = [startIndex[1],startIndex[0]];
-    let goalIndexR = [goalIndex[1],goalIndex[0]];
-    return findPathR(startIndexR,goalIndexR,lab, [startIndexR]);
+    let startIndexR = [startIndex[1], startIndex[0]];
+    let goalIndexR = [goalIndex[1], goalIndex[0]];
+    return findPathR(startIndexR, goalIndexR, lab, [startIndexR]);
+}
+export function getCardCode(shape, orientation) {
+    //shape: 0
+    let bin_array = [[1, 1, 0, 0], [1, 0, 1, 0], [1, 1, 1, 0], [1, 1, 1, 1]]
+
+    let bin_card = bin_array[shape]
+
+    for (let i = 0; i < orientation; i++) {
+
+        const lastElement = bin_card.pop();
+        bin_card.unshift(lastElement);
+    }
+
+return bin_card.reduce((acc,val,index) => acc + (val * 2^index))
+
 }

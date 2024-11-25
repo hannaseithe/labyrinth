@@ -28,11 +28,14 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
   while (!superAgent.buffersFull) {
     const { done, cumulativeRewards} = superAgent.playTurn();
     if (done) {
-      console.log(`game finished - counter: ${superAgent.doneCounter}`)
+      console.log(`game finished - counter: ${superAgent.doneCounter} ratio: ${superAgent.doneCounter / superAgent.frameCount}`)
     }
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
-    console.log("Turn: " + superAgent.frameCount)
-    console.log("Total Reward: " + totalReward)
+    if (superAgent.frameCount % 1000 == 0) {
+      console.log("Turn: " + superAgent.frameCount)
+      console.log("Total Reward: " + totalReward)
+    }
+ 
   }
 
   const optimizer = tf.train.adam(learningRate);
@@ -44,7 +47,7 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
     const { done, cumulativeRewards } = superAgent.playTurn();
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
     if (done) {
-      console.log(`game finished - counter: ${superAgent.doneCounter}`)
+      console.log(`game finished - counter: ${superAgent.doneCounter}  ratio: ${superAgent.doneCounter / superAgent.frameCount}`)
       
 
       if (totalReward > totalRewardBest) {
@@ -69,6 +72,9 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
     if (superAgent.frameCount % 100 == 0) {
       console.log("Turn: " + superAgent.frameCount)
       console.log("Total Reward: " + totalReward)
+      superAgent.agents.forEach((agent, i) => {
+        console.log(`Agent ${i} current loss: ${agent.losses[agent.losses.length-1]}`)
+      })
     }
     if (superAgent.frameCount >= maxNumFrames) {
       if (totalReward > totalRewardBest) {
@@ -127,13 +133,13 @@ function parseArguments() {
   });
   parser.addArgument('--maxNumFrames', {
     type: 'float',
-    defaultValue: 1e4,
+    defaultValue: 1e5,
     help: 'Maximum number of frames to run durnig the training. ' +
       'Training ends immediately when this frame count is reached.'
   });
   parser.addArgument('--replayBufferSize', {
     type: 'int',
-    defaultValue: 1e3,
+    defaultValue: 15e3,
     help: 'Length of the replay memory buffer.'
   });
   parser.addArgument('--epsilonInit', {
@@ -143,12 +149,12 @@ function parseArguments() {
   });
   parser.addArgument('--epsilonFinal', {
     type: 'float',
-    defaultValue: 0.05,
+    defaultValue: 0.1,
     help: 'Final value of epsilon, used for the epsilon-greedy algorithm.'
   });
   parser.addArgument('--epsilonDecayFrames', {
     type: 'int',
-    defaultValue: 3e3,
+    defaultValue: 6e4,
     help: 'Number of frames of game over which the value of epsilon ' +
       'decays from epsilonInit to epsilonFinal'
   });
@@ -159,17 +165,17 @@ function parseArguments() {
   });
   parser.addArgument('--gamma', {
     type: 'float',
-    defaultValue: 0.95,
+    defaultValue: 0.85,
     help: 'Reward discount rate.'
   });
   parser.addArgument('--learningRate', {
     type: 'float',
-    defaultValue: 1e-2,
+    defaultValue: 1e-3,
     help: 'Learning rate for DQN training.'
   });
   parser.addArgument('--syncEveryFrames', {
     type: 'int',
-    defaultValue: 1e2,
+    defaultValue: 5e3,
     help: 'Frequency at which weights are sync\'ed from the online network ' +
       'to the target network.'
   });

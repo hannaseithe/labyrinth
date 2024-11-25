@@ -33,8 +33,11 @@ export class ReplayMemory {
    * @param {any} item The item to append.
    */
   append(item) {
+    if (!item) {
+      throw new Error("undefined item appended to replayMemory")
+    }
     this.buffer[this.index] = item;
-    if (this.index == 0) {
+    if (this.index == 0 && !this.bufferFull) {
       this.buffer[this.index][3] = this.initialNegativeReward
     }
     this.length = Math.min(this.length + 1, this.maxLen);
@@ -59,11 +62,20 @@ export class ReplayMemory {
       throw new Error(
         `batchSize (${batchSize}) exceeds buffer length (${this.maxLen})`);
     }
+    if (!this.bufferFull) {
+      throw new Error(`trying to sample before buffer is filled. Current index at: ${this.index}`)
+    }
     tf.util.shuffle(this.bufferIndices_);
 
     const out = [];
     for (let i = 0; i < batchSize; ++i) {
-      out.push(this.buffer[this.bufferIndices_[i]]);
+      let item = this.buffer[this.bufferIndices_[i]]
+      if (item) {
+        out.push(item);
+      }else {
+        throw new Error(`null item in batch at ${this.bufferIndices_[i]}`)
+      }
+      
     }
     return out;
   }
