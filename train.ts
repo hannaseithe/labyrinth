@@ -33,7 +33,6 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
     if (superAgent.frameCount % 1000 == 0) {
       console.log("Turn: " + superAgent.frameCount)
-      console.log("Total Reward: " + totalReward)
     }
  
   }
@@ -47,7 +46,7 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
     const { done, cumulativeRewards } = superAgent.playTurn();
     const totalReward = cumulativeRewards.reduce((acc, value) => (acc + value));
     if (done) {
-      console.log(`game finished - counter: ${superAgent.doneCounter}  ratio: ${superAgent.doneCounter / superAgent.frameCount}`)
+      console.log(`\x1b[35m game finished - counter: ${superAgent.doneCounter}  ratio: ${superAgent.doneCounter / superAgent.frameCount} \x1b[37m`)
       
 
       if (totalReward > totalRewardBest) {
@@ -65,16 +64,32 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
 
           }
           await superAgent.onlineNetwork.save(`file://${savePath}`);
-          console.log(`Saved DQN to ${savePath} with total reward: ${totalReward}`);
+          console.log(`\x1b[33m Saved DQN to ${savePath} with total reward: ${totalReward} \x1b[37m`);
         }
       }
     }
     if (superAgent.frameCount % 100 == 0) {
       console.log("Turn: " + superAgent.frameCount)
-      console.log("Total Reward: " + totalReward)
       superAgent.agents.forEach((agent, i) => {
-        console.log(`Agent ${i} current loss: ${agent.losses[agent.losses.length-1]}`)
+        console.log(`Agent ${i} current exponential moving average: \x1b[36m ${agent.loss} \x1b[37m`)
+        console.log(`epsilon: ${agent.epsilon}`)
       })
+    }
+    if (superAgent.frameCount % 1000 === 0) {
+      if (savePath != null) {
+        if (!fs.existsSync(savePath)) {
+          fs.mkdir(path.join(__dirname, savePath),
+            { recursive: true },
+            (err) => {
+              if (err) {
+                return console.error(err);
+              }
+              console.log('Directory created successfully!');
+            });
+        }
+        await superAgent.onlineNetwork.save(`file://${savePath}`);
+        console.log(`%c Saved DQN to ${savePath}`, "color:green;");
+      }
     }
     if (superAgent.frameCount >= maxNumFrames) {
       if (totalReward > totalRewardBest) {
@@ -91,7 +106,7 @@ async function train(superAgent, batchSize, gamma, learningRate, cumulativeRewar
               });
           }
           await superAgent.onlineNetwork.save(`file://${savePath}`);
-          console.log(`Saved DQN to ${savePath}`);
+          console.log(`%c Saved DQN to ${savePath}`, "color:green;");
         }
       }
       break;
@@ -133,18 +148,18 @@ function parseArguments() {
   });
   parser.addArgument('--maxNumFrames', {
     type: 'float',
-    defaultValue: 1e5,
+    defaultValue: 7e5,
     help: 'Maximum number of frames to run durnig the training. ' +
       'Training ends immediately when this frame count is reached.'
   });
   parser.addArgument('--replayBufferSize', {
     type: 'int',
-    defaultValue: 15e3,
+    defaultValue: 1e5,
     help: 'Length of the replay memory buffer.'
   });
   parser.addArgument('--epsilonInit', {
     type: 'float',
-    defaultValue: 0.9,
+    defaultValue: 1,
     help: 'Initial value of epsilon, used for the epsilon-greedy algorithm.'
   });
   parser.addArgument('--epsilonFinal', {
@@ -154,28 +169,33 @@ function parseArguments() {
   });
   parser.addArgument('--epsilonDecayFrames', {
     type: 'int',
-    defaultValue: 6e4,
+    defaultValue: 3e4,
     help: 'Number of frames of game over which the value of epsilon ' +
       'decays from epsilonInit to epsilonFinal'
   });
+  parser.addArgument('--epsilonDecayFactor', {
+    type: 'int',
+    defaultValue: 0.9999,
+    help: 'Factor by watch epsilon is exponentially decayed'
+  });
   parser.addArgument('--batchSize', {
     type: 'int',
-    defaultValue: 5e1,
+    defaultValue: 64,
     help: 'Batch size for DQN training.'
   });
   parser.addArgument('--gamma', {
     type: 'float',
-    defaultValue: 0.85,
+    defaultValue: 0.95,
     help: 'Reward discount rate.'
   });
   parser.addArgument('--learningRate', {
     type: 'float',
-    defaultValue: 1e-3,
+    defaultValue: 5e-5,
     help: 'Learning rate for DQN training.'
   });
   parser.addArgument('--syncEveryFrames', {
     type: 'int',
-    defaultValue: 5e3,
+    defaultValue: 5e2,
     help: 'Frequency at which weights are sync\'ed from the online network ' +
       'to the target network.'
   });
@@ -205,6 +225,7 @@ async function main() {
     epsilonInit: args.epsilonInit,
     epsilonFinal: args.epsilonFinal,
     epsilonDecayFrames: args.epsilonDecayFrames,
+    epsilonDecayFactor: args.epsilonDecayFactor,
     learningRate: args.learningRate
   }
 

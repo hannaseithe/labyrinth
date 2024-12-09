@@ -15,6 +15,8 @@ export class LabGamePlayer {
         // The epsilon-greedy algorithm.
         let action1, action2, action3;
         const state = this.game.getState();
+        let numA3 = this.game.config.numActionsMove
+        let numA2 = this.game.config.numActionsShiftCard
       
 
             tf.tidy(() => {
@@ -22,10 +24,10 @@ export class LabGamePlayer {
                     getStateTensors(state, this.game.config);
                 // const a = labTensor.dataSync()
                 //const b = otherTensor.dataSync()
-                const predictionTensor = this.onlineNetwork.predict([labTensor, otherTensor]);
-                action1 = predictionTensor[0].argMax(-1).dataSync()[0]
-                action2 = predictionTensor[1].argMax(-1).dataSync()[0]
-                action3 = predictionTensor[2].argMax(-1).dataSync()[0]
+                const predValue = this.onlineNetwork.predict([labTensor, otherTensor]).argMax(-1).dataSync()[0];
+                action1 = Math.floor(predValue / (numA2*numA3))
+                action2 = Math.floor((predValue % (numA2+numA3))/numA3)
+                action3 = predValue % numA3
             });
         
 

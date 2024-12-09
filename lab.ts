@@ -8,7 +8,7 @@
 // t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
 // cross orientation:1		--> all:1
 // canvas variables
-import * as tf from '@tensorflow/tfjs'
+import * as tf from '@tensorflow/tfjs-node'
 import { findPath, getCardCode } from './findPath.js';
 import { drawLab, drawMachLab } from './drawLab.js';
 import { getRandomInteger } from './utils.js';
@@ -16,13 +16,16 @@ import { LabGamePlayer } from './machPlayer.js';
 
 
 export const REWARDS = {
-    WIN: 100,
-    NUMBER_FOUND: 20,
-    MOVED: 1,
-    PLAYER_ON_CARD: -0.05,
-    PATH_NOT_FOUND: -0.01,
-    OTHER_FOUND_NUMBER: -2,
-    LOST: -10
+    WIN: 2,
+    NUMBER_FOUND: 0.8,
+    CLEARED_PATH: 0.2,
+    BLOCKED_PATH:-0.1,
+    //NUMBER_ON_CARD:0.05,
+    //MOVED: 0.01,
+    PLAYER_ON_CARD: -0.1,
+    PATH_NOT_FOUND: -0.05,
+    OTHER_FOUND_NUMBER: -0.05,
+    LOST: -0.1
 }
 
 
@@ -339,6 +342,17 @@ export class LabGame {
 
     }
 
+    findCardNumber(array, element) {
+        for (let row = 0; row < array.length; row++) {
+            for (let col = 0; col < array[row].length; col++) {
+                if (array[row][col].number === element) {
+                    return [row, col];
+                }
+            }
+        }
+        return null; // Return null if the element is not found
+    }
+
     _rotateExtraCard_(action):Promise<any> {
         for (let i = 0; i < action; i++) {
             this.data_.extraCard.orientation++
@@ -350,6 +364,11 @@ export class LabGame {
     }
 
     _shiftCards_(index, direction) {
+        let reward = 0;
+        let currentPlayer = this.data_.players[this.data_.game.turns[this.data_.game.turns.length - 1].player];
+        let nextCardNumber = currentPlayer.listNumbers.find((card)=> !card.solved)
+        let nextCard = this.findCardNumber(this.data_.lab, nextCardNumber.number)
+        let pathBeforeShift = nextCard ? findPath(currentPlayer.currentIndex, nextCard, this.data_.lab) : false
         if (index % 2 == 1) {
             var cardonStack = this.data_.extraCard;
             var newCardonStack;
@@ -402,11 +421,22 @@ export class LabGame {
             }
             this.data_.extraCard = newCardonStack;
             this.logShift_(index, direction);
+            nextCard = this.findCardNumber(this.data_.lab, nextCardNumber.number)
+            let pathAfterShift = nextCard ? findPath(currentPlayer.currentIndex, nextCard, this.data_.lab) : false
+            
+            
+            if (!pathBeforeShift && pathAfterShift) {
+                reward += REWARDS.CLEARED_PATH
+            }
+            if (pathBeforeShift && !pathAfterShift) {
+                reward+= REWARDS.BLOCKED_PATH
+            }
         }
         if (this.draw) {
             drawMachLab(this)
             return new Promise(resolve => setTimeout(resolve, 500));
         }
+        return reward
     };
 
     _moveCurrentPlayer_(x, y):Promise<any> | any {
@@ -425,6 +455,7 @@ export class LabGame {
                     // test if number on card
                     let numberOnCard = this.data_.lab[card[1]][card[0]].number;
                     if (numberOnCard) {
+                        //reward += REWARDS.NUMBER_ON_CARD;
                         let nextCardIndex = this.getNextNumberIndex_(currentPlayer.listNumbers);
                         if (nextCardIndex + 1 == currentPlayer.listNumbers.length) {
                             if (numberOnCard == currentPlayer.listNumbers[nextCardIndex].number) {
@@ -456,18 +487,18 @@ export class LabGame {
             drawMachLab(this)
             return new Promise(resolve => setTimeout(() => resolve({ reward: reward, done: done }), 500));
         }
-        return { reward: reward, done: done }
+        return { rewardMove: reward, done: done }
     }
 
     step(a1, a2, a3) {
-        let reward, done;
+        let rewardMove, rewardShift, done;
         //TODO: Calculate Reward, State and Done
         this._rotateExtraCard_(a1);
-        this._shiftCards_(((Math.floor(a2/4)) * 2) + 1, a2 % 4);
-        ({ reward, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
+        rewardShift = this._shiftCards_(((Math.floor(a2/4)) * 2) + 1, a2 % 4);
+        ({ rewardMove, done } = this._moveCurrentPlayer_(Math.floor(a3 / this.config.width), a3 % this.config.width));
         let state = this.getState();
 
-        return { reward, state, done }
+        return { reward: rewardShift + rewardMove, state, done }
     }
 
     async stepAsync(a1, a2, a3) {
@@ -891,6 +922,12 @@ export class LabGame {
         let c = a3 % this.config.width
         if (r == cpIndex[0] && c == cpIndex[1]) return true;
         return this.noPlayerOnCard_([r,c]) && findPath(cpIndex, [r,c], this.data_.lab)
+    }
+    
+    isShiftAllowed(a2) {
+        let lastTurn = this.data_.game.turns[this.data_.game.turns.length - 1].shift
+        if (!lastTurn) {return true}
+        return (lastTurn.index == ((Math.floor(a2/4)) * 2) + 1) && (lastTurn.direction == a2 % 4)
     }
 
 }

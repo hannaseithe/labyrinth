@@ -5,6 +5,7 @@ import * as tf from '@tensorflow/tfjs-node'
 export class ReplayMemory {
   maxLen;
   buffer;
+  sBuffer;
   index;
   length;
   bufferIndices_;
@@ -66,18 +67,19 @@ export class ReplayMemory {
       throw new Error(`trying to sample before buffer is filled. Current index at: ${this.index}`)
     }
     tf.util.shuffle(this.bufferIndices_);
-
+    const preOut = []
     const out = [];
-    for (let i = 0; i < batchSize; ++i) {
+    for (let i = 0; i < 100*batchSize; ++i) {
       let item = this.buffer[this.bufferIndices_[i]]
       if (item) {
-        out.push(item);
+        preOut.push(item);
       }else {
         throw new Error(`null item in batch at ${this.bufferIndices_[i]}`)
       }
       
     }
-    return out;
+    preOut.sort((i1,i2) => {return (i2[2]+i2[3]) - (i1[2] + i1[3])})
+    return preOut.slice(0,batchSize);
   }
 
   addNegativeReward(reward) {
