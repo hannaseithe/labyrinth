@@ -131,12 +131,12 @@ function parseArguments() {
   });
   parser.addArgument('--height', {
     type: 'int',
-    defaultValue: 5,
+    defaultValue: 3,
     help: 'Height of the game board.'
   });
   parser.addArgument('--width', {
     type: 'int',
-    defaultValue: 5,
+    defaultValue: 3,
     help: 'Width of the game board.'
   });
   parser.addArgument('--cumulativeRewardThreshold', {
@@ -154,7 +154,7 @@ function parseArguments() {
   });
   parser.addArgument('--replayBufferSize', {
     type: 'int',
-    defaultValue: 1e5,
+    defaultValue: 5e4,
     help: 'Length of the replay memory buffer.'
   });
   parser.addArgument('--epsilonInit', {
@@ -175,22 +175,22 @@ function parseArguments() {
   });
   parser.addArgument('--epsilonDecayFactor', {
     type: 'int',
-    defaultValue: 0.9999,
+    defaultValue: 0.99995,
     help: 'Factor by watch epsilon is exponentially decayed'
   });
   parser.addArgument('--batchSize', {
     type: 'int',
-    defaultValue: 64,
+    defaultValue: 32,
     help: 'Batch size for DQN training.'
   });
   parser.addArgument('--gamma', {
     type: 'float',
-    defaultValue: 0.95,
+    defaultValue: 0.97,
     help: 'Reward discount rate.'
   });
   parser.addArgument('--learningRate', {
     type: 'float',
-    defaultValue: 5e-5,
+    defaultValue: 1e-4,
     help: 'Learning rate for DQN training.'
   });
   parser.addArgument('--syncEveryFrames', {
@@ -218,7 +218,7 @@ async function main() {
 
   console.log(`args: ${JSON.stringify(args, null, 2)}`);
 
-  let game = new LabGame(0, 4, args.height, args.width, false);
+  let game = new LabGame(0, 1, args.height, args.width, false);
 
   let agentConfig = {
     replayBufferSize: args.replayBufferSize,
@@ -229,7 +229,7 @@ async function main() {
     learningRate: args.learningRate
   }
 
-  let superAgent = new LabGameSuperAgent(4, game, agentConfig);
+  let superAgent = new LabGameSuperAgent(1, game, agentConfig);
 
   await train(
     superAgent, args.batchSize, args.gamma, args.learningRate,

@@ -69,7 +69,11 @@ export class ReplayMemory {
     tf.util.shuffle(this.bufferIndices_);
     const preOut = []
     const out = [];
-    for (let i = 0; i < 100*batchSize; ++i) {
+
+    /*To learn from more meaningful moves we chose moves with higher rewards with greater probablity
+    */
+    // preselect a Set (preOut) of Size 1% of Buffer Size
+    for (let i = 0; i < this.maxLen * 0.01 * batchSize; ++i) { 
       let item = this.buffer[this.bufferIndices_[i]]
       if (item) {
         preOut.push(item);
@@ -78,7 +82,9 @@ export class ReplayMemory {
       }
       
     }
+    //Sort preselection so that highest reward is in front
     preOut.sort((i1,i2) => {return (i2[2]+i2[3]) - (i1[2] + i1[3])})
+    //return batchsize elements of sorted preseclection
     return preOut.slice(0,batchSize);
   }
 

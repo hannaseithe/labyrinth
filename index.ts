@@ -5,7 +5,7 @@ let game;
 
 function initGame() {
 
-  game = new LabGame(1,3,5,5,true);
+  game = new LabGame(1,1,4,4,true);
 
 }
 

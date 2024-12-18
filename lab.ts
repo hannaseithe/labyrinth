@@ -1,12 +1,36 @@
 /*Type Card {
-    shape: CORNER || STRAIGHT || TCROSS || CROSS
-    orientation: 0||1||2||3
-    fixed: true || false
+    shape: CORNER  == 0|| STRAIGHT == 1 || TCROSS == 2|| CROSS ==  3
+    orientation: 0||1||2||3 (turns the card clockwise)
+
+    orientation 0 for all Cards
+    CORNER:                 . * .
+                            . * *
+                            . . .
+
+    STRAIGHT:               . * .
+                            . * .
+                            . * .
+
+    T-CROSS:                . * .
+                            . * *
+                            . * .
+
+    CROSS:                  . * .
+                            * * *
+                            . * .
+
+    corner  	--> top:1 AND right:1 (rest:0)
+    straight  	--> top:1 AND bottom:1 (rest:0)
+    t-cross  	--> top:1 AND right:1 AND bottom:1 (left:0)
+    cross   	--> all:1
+
+ !!!!                           
+ IMPORTANT: this.data_.lab is a height x width matrix with indices [rowIndex][columnIndex]
+ Unfortunately card Indices and functioncalls are usually the other way around [columnIndex,rowIndex] / (columnIndex, rowIndex)
+ !!!!               
+
 }*/
-// corner orientation: 1 	--> top:1 AND right:1 (rest:0)
-// straight orientation: 1 	--> top:1 AND bottom:1 (rest:0)
-// t-cross orientation: 1	--> top:1 AND right:1 AND bottom:1 (left:0)
-// cross orientation:1		--> all:1
+
 // canvas variables
 import * as tf from '@tensorflow/tfjs-node'
 import { findPath, getCardCode } from './findPath.js';
@@ -19,7 +43,7 @@ export const REWARDS = {
     WIN: 2,
     NUMBER_FOUND: 0.8,
     CLEARED_PATH: 0.2,
-    BLOCKED_PATH:-0.1,
+    BLOCKED_PATH:-0.3,
     //NUMBER_ON_CARD:0.05,
     //MOVED: 0.01,
     PLAYER_ON_CARD: -0.1,
@@ -501,7 +525,7 @@ export class LabGame {
         return { reward: rewardShift + rewardMove, state, done }
     }
 
-    async stepAsync(a1, a2, a3) {
+    async stepAsync(a1, a2, a3) { //this is the Async version of step Funktion which is needed for animation  in the browser
         let reward, done;
         //TODO: Calculate Reward, State and Done
         await this._rotateExtraCard_(a1);
@@ -759,6 +783,11 @@ export class LabGame {
         })
     }
 
+    noOtherPlayerOnCard_(card, cpIndex) {
+        if (card[0] == cpIndex[0] && card[1]==cpIndex[1]) return true
+        else return this.noPlayerOnCard_(card)
+    }
+
     handleMouseDown_(x, y) {
         this.data_.isDragging = false;
         this.data_.players.forEach((shape, index) => {
@@ -844,28 +873,6 @@ export class LabGame {
 
             });
         }
-        /*if (!this.data_.isDragging) {
-            this.data_.clickableShapes.forEach((shape, index) => {
-                defineShape(shape);
-                // test if the mouse is in the current shape
-                if (this.ctx_.isPointInPath(x, y)) {
-                    switch (shape.cat) {
-                        case this.config.interactiveType.EXTRACARD:
-                            markExtraCard();
-                            mouseout = false;
-                            break;
-                        case this.config.interactiveType.HORTOPEDGECARD || this.config.interactiveType.HORBOTEDGECARD:
-                            markMovableVerLine(shape.points[0].x, (this.data_.lab.length - 1) * this.config.cardSize);
-                            mouseout = false;
-                            break;
-                        case this.config.interactiveType.VERLEFTEDGECARD || this.config.interactiveType.VERRIGHTEDGECARD:
-                            markMovableHorLine((this.data_.lab[0].length - 1) * this.config.cardSize, shape.points[0].y);
-                            mouseout = false;
-                            break;
-                    }
-                }
-            });
-        }*/
 
     }
 
@@ -920,8 +927,10 @@ export class LabGame {
         let cpIndex = this.data_.players[cp].currentIndex
         let r = Math.floor(a3 / this.config.width)
         let c = a3 % this.config.width
-        if (r == cpIndex[0] && c == cpIndex[1]) return true;
-        return this.noPlayerOnCard_([r,c]) && findPath(cpIndex, [r,c], this.data_.lab)
+        if (c == cpIndex[0] && r == cpIndex[1]) return true;
+        let noPlayer = this.noOtherPlayerOnCard_([c,r],cpIndex)
+        let pathExists = findPath(cpIndex, [c,r], this.data_.lab)
+        return this.noOtherPlayerOnCard_([c,r],cpIndex) && findPath(cpIndex, [c,r], this.data_.lab)
     }
     
     isShiftAllowed(a2) {
@@ -941,13 +950,24 @@ export function getRandomActions(game) {
 
 export function getStateTensors(state, config) {
 
-    /*     let relevantState = {
-            lab: this.data_.lab,
-            currentPlayer: currentPlayer,
-            otherPlayers,
-            extraCard: this.data_.extraCard,
-            lastShift: turns[turns.length - 2].shift
-        } */
+    /*We create two different tensors as state (which will be the two different inputs for the NN)
+
+    The first Tensor is a 2D Tensor with the dimension 7 x height x width that will be fed into the convolutional layers
+    It has 7 channels:
+    1. the cards shape
+    2. the card orientation
+    3. the number on the card
+    4. A unique number coding for each card that combines shape and orientation
+    5. Whether the card is reachable from the current players position
+    6. The current players position
+    7. The other players position
+
+    All the values are normed to [0 - 1]
+
+    The second tensore is 1D and contains information about the list of numbers the current player has to visit,
+    the extra card, and the last shift made
+
+    */
     if (!Array.isArray(state)) {
         state = [state];
     }
@@ -968,36 +988,32 @@ export function getStateTensors(state, config) {
         let currentPlayer = state[n].currentPlayer
         let cpPosition = state[n].players[currentPlayer].currentIndex
 
-        state[n].lab.forEach((column, cIndex) => {
-            column.forEach((card, rIndex) => {
-                firstBuffer.set((card.shape + 1)/4, n,0,  cIndex, rIndex)
-                firstBuffer.set((card.orientation % 4 + 1)/4, n, 1, cIndex, rIndex)
-                firstBuffer.set(card.number ? card.number / config.amountNumbers : 0, n, 2,  cIndex, rIndex)
-                firstBuffer.set(getCardCode(card.shape,card.orientation)/15,n,3,cIndex,rIndex)
-                firstBuffer.set(findPath(cpPosition, [cIndex,rIndex],state[n].lab)? 1:0,n,4,cIndex,rIndex)
+        state[n].lab.forEach((row, rIndex) => {
+            row.forEach((card, cIndex) => {
+                firstBuffer.set((card.shape + 1)/4, n,0,  rIndex, cIndex)
+                firstBuffer.set((card.orientation % 4 + 1)/4, n, 1, rIndex, cIndex)
+                firstBuffer.set(card.number ? card.number / config.amountNumbers : 0, n, 2,  rIndex, cIndex)
+                firstBuffer.set(getCardCode(card.shape,card.orientation)/15,n,3,rIndex,cIndex)
+                firstBuffer.set(findPath(cpPosition, [cIndex,rIndex],state[n].lab)? 1:0,n,4,rIndex,cIndex)
             })
         })
 
-        firstBuffer.set(1, n, 5, cpPosition[0], cpPosition[1])
+        firstBuffer.set(1, n, 5, cpPosition[1], cpPosition[0])
         
         state[n].players.forEach((player, index) => {
             if (currentPlayer != index) {
-                firstBuffer.set((index+1)/pNumber, n, 6, player.currentIndex[0], player.currentIndex[1])
+                firstBuffer.set(1, n, 6, player.currentIndex[1], player.currentIndex[0])
             }
         })
 
-        let otherStateIndex = 0
 
-        state[n].players[currentPlayer].listNumbers.forEach((card) => {
-            secondBuffer.set(card.number / config.amountNumbers, n, otherStateIndex);
-            secondBuffer.set(card.solved ? 1 : 0, n, otherStateIndex + 1);
-            otherStateIndex += 2
-        })
-        secondBuffer.set((state[n].extraCard.shape + 1)/4, n, otherStateIndex);
-        secondBuffer.set((state[n].extraCard.orientation % 4 + 1) / 4, n, otherStateIndex + 1);
-        secondBuffer.set(state[n].extraCard.number ? state[n].extraCard.number  / config.amountNumbers : 0, n, otherStateIndex + 2);
-        secondBuffer.set(state[n].lastShift.index / (columns - 2), n, otherStateIndex + 3);
-        secondBuffer.set(state[n].lastShift.direction / 3 , n, otherStateIndex + 4);
+        let nextCard = state[n].players[currentPlayer].listNumbers.find((card) => !card.solved)
+        secondBuffer.set(nextCard.number / config.amountNumbers, n, 0);
+        secondBuffer.set((state[n].extraCard.shape + 1)/4, n, 1);
+        secondBuffer.set((state[n].extraCard.orientation % 4 + 1) / 4, n, 2);
+        secondBuffer.set(state[n].extraCard.number ? state[n].extraCard.number  / config.amountNumbers : 0, n, 3);
+        secondBuffer.set(state[n].lastShift.index / (columns), n, 4);
+        secondBuffer.set(state[n].lastShift.direction / 3 , n, 5);
 
 
     }

@@ -130,6 +130,8 @@ export class LabGameAgent {
         const lossFunction = () => tf.tidy(() => {
             const stateTensors = getStateTensors(
                 batch.map(example => example[0]), this.game.config);
+            let st1 = stateTensors[0].dataSync()
+            let st2 = stateTensors[1].dataSync()
 
 
             const actionTensor = tf.tensor1d(
@@ -257,15 +259,15 @@ export class LabGameSuperAgent {
                 for (let j = 1; j < this.number; j++) {
                     this.agents[(i + j) % this.number].addNegativeReward(negativeReward);
                 }
-                this.agents[i].addFinalState(state);
+                //this.agents[i].addFinalState(state);
             } else {
                 for (let j = 1; j < this.number - 1; j++) {
                     this.agents[(i + j) % this.number].addNegativeReward(negativeReward);
-                    this.agents[(i + j) % this.number].addFinalState(state);
+                   // this.agents[(i + j) % this.number].addFinalState(state);
                     this.agents[(i + j) % this.number].setDone();
                 }
 
-                this.agents[i].addFinalState(state);
+                //this.agents[i].addFinalState(state);
                 this.agents[i].setDone();
                 if (i < this.number -1) {
                     buffersFull = false

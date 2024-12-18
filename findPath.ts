@@ -147,6 +147,6 @@ export function getCardCode(shape, orientation) {
         bin_card.unshift(lastElement);
     }
 
-return bin_card.reduce((acc,val,index) => acc + (val * 2^index))
+    return bin_card.reduce((acc, val, index) => acc + (val * (2 ** index)),0)
 
 }
